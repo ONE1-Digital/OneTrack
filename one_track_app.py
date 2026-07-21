@@ -32,7 +32,7 @@ def cargar_tablas(sheet_name):
         df_user = df_total[df_total['onetrack_id'] == token_actual]
         return df_user, df_total
     except Exception as e:
-        st.error(f"Error leyendo {sheet_name}. Asegúrate de que la pestaña exista y tenga datos.")
+        st.error(f"Error real en {sheet_name}: {e}")
         return pd.DataFrame(), pd.DataFrame()
 
 # Cargamos las 4 tablas
