@@ -96,6 +96,7 @@ if st.sidebar.button("Sincronizar Todo con la Nube", type="primary"):
         
         st.cache_data.clear()
     st.sidebar.success("¡Datos guardados correctamente!")
+
 # --- 🧪 CÓDIGO TEMPORAL PARA DATOS DUMMY ---
 st.sidebar.divider()
 if st.sidebar.button("🧪 Inyectar Datos a 'ONETest'", type="secondary"):
