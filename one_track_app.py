@@ -165,28 +165,84 @@ if st.sidebar.button("Cerrar Sesion"):
     st.rerun()
 
 # --- SECCION 1: ENTRADA DE DATOS ---
-if menu == "Entrada de Datos":
-    st.title("ONE Track: Captura de Datos")
+st.sidebar.divider()
     
-    tabs_datos = st.tabs(["Q1 (Ene-Mar)", "Q2 (Abr-Jun)", "Q3 (Jul-Sep)", "Q4 (Oct-Dic)"])
-    
-    for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
-        with tabs_datos[q_idx]:
-            meses_q = trimestres[q_name]
+    # Funcion para empaquetar y guardar en la base de datos
+    def guardar_en_bd():
+        # 1. Recolectar KPIs (5 en total, uniendo los 4 trimestres)
+        kpis_data = []
+        okrs_data = []
+        crit_data = []
+        
+        for i in range(1, 6):
+            # Tomamos la configuracion base (nombres, metas, pesos) del Q1
+            kpi_row = {
+                "onetrack_id": token,
+                "KPI_Nombre": st.session_state.get(f"kpi_Q1_{i}_nom", ""),
+                "Tipo": st.session_state.get(f"kpi_Q1_{i}_tipo", "Acumulado"),
+                "Meta": st.session_state.get(f"kpi_Q1_{i}_meta", 0.0),
+                "UM": st.session_state.get(f"kpi_Q1_{i}_um", "U"),
+                "< Mejor": st.session_state.get(f"kpi_Q1_{i}_menor", "NO"),
+                "Peso_%": st.session_state.get(f"kpi_Q1_{i}_peso", 20.0)
+            }
             
-            st.header(f"Planificacion {q_name}")
+            okr_row = {
+                "onetrack_id": token,
+                "OKR_ID": i,
+                "OKR_Nombre": st.session_state.get(f"okr_Q1_{i}_nom", ""),
+                "Objetivo": st.session_state.get(f"okr_Q1_{i}_obj", ""),
+                "Peso_%": st.session_state.get(f"okr_Q1_{i}_peso", 20.0)
+            }
             
-            st.subheader("1. KPIs (Numeros Inteligentes)")
-            for i in range(1, 6): 
-                renderizar_celula_kpi(i, q_name, meses_q)
+            crit_row = {
+                "onetrack_id": token,
+                "OKR_ID": i,
+                "Criterio_Nombre": st.session_state.get(f"okr_Q1_{i}_crit", ""),
+                "Meta": st.session_state.get(f"okr_Q1_{i}_crit_meta", 0.0)
+            }
+            
+            # Recorremos los trimestres para recolectar los meses y añadirlos a la misma fila
+            for q_name, meses in trimestres.items():
+                for mes in meses:
+                    kpi_row[f"{mes}_P"] = st.session_state.get(f"kpi_{q_name}_{i}_p_{mes}", 0.0)
+                    kpi_row[f"{mes}_R"] = st.session_state.get(f"kpi_{q_name}_{i}_r_{mes}", 0.0)
+                    
+                    crit_row[f"{mes}_P"] = st.session_state.get(f"okr_{q_name}_{i}_p_{mes}", 0.0)
+                    crit_row[f"{mes}_R"] = st.session_state.get(f"okr_{q_name}_{i}_r_{mes}", 0.0)
+            
+            # Solo guardamos si el usuario le puso nombre al KPI/OKR
+            if kpi_row["KPI_Nombre"] != "": kpis_data.append(kpi_row)
+            if okr_row["OKR_Nombre"] != "": 
+                okrs_data.append(okr_row)
+                crit_data.append(crit_row)
                 
-            st.subheader("2. OKRs (Prioridades)")
-            for i in range(1, 6): 
-                renderizar_celula_okr(i, q_name, meses_q)
-                
-    st.sidebar.divider()
+        # Convertimos a DataFrames
+        df_kpis = pd.DataFrame(kpis_data)
+        df_okrs = pd.DataFrame(okrs_data)
+        df_crit = pd.DataFrame(crit_data)
+        
+        # Funcion interna de sincronizacion segura con Supabase
+        def sync_tabla(df_nuevo, table_name):
+            if df_nuevo.empty: return
+            try:
+                df_total = conn.query(f"SELECT * FROM {table_name}")
+                df_otros = df_total[df_total['onetrack_id'] != token]
+                df_final = pd.concat([df_otros, df_nuevo], ignore_index=True)
+            except Exception:
+                df_final = df_nuevo
+            df_final.to_sql(table_name, con=conn.engine, if_exists='replace', index=False)
+
+        # Ejecutamos el guardado
+        sync_tabla(df_kpis, "kpis")
+        sync_tabla(df_okrs, "okrs_general")
+        sync_tabla(df_crit, "okr_criterios")
+
     if st.sidebar.button("Guardar Cambios", type="primary"):
-        st.sidebar.success("Estructura lista para conectar a base de datos.")
+        with st.spinner("Sincronizando con la nube..."):
+            guardar_en_bd()
+            # Reiniciamos la bandera de carga para que al cambiar de menu traiga lo mas nuevo
+            st.session_state.datos_cargados = False 
+        st.sidebar.success("Datos guardados exitosamente.")
 
 # --- SECCION 2: DASHBOARD DE RESULTADOS ---
 elif menu == "Dashboard de Resultados":
