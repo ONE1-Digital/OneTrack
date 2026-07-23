@@ -4,12 +4,14 @@ import pandas as pd
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="ONE Track - Workspace", layout="wide")
 
-# Ocultar elementos visuales por defecto de Streamlit para un look mas limpio
 st.markdown("""
     <style>
     .stExpander { border-left: 5px solid #002060; background-color: #f8f9fa; }
     </style>
 """, unsafe_allow_html=True)
+
+# --- CONEXION A BASE DE DATOS ---
+conn = st.connection("supabase", type="sql")
 
 # --- LOGIN ---
 if 'auth_token' not in st.session_state or st.session_state.auth_token is None:
@@ -17,6 +19,7 @@ if 'auth_token' not in st.session_state or st.session_state.auth_token is None:
     token = st.text_input("Palabra de acceso (Token):", type="password")
     if st.button("Entrar"):
         st.session_state.auth_token = token
+        st.session_state.datos_cargados = False # Bandera para cargar datos solo una vez
         st.rerun()
     st.stop()
 
@@ -30,18 +33,92 @@ trimestres = {
     "Q4": ["Oct", "Nov", "Dic"]
 }
 
-# --- FUNCIONES DE INTERFAZ (LAS CELULAS DE CAPTURA) ---
-def renderizar_celula_kpi(indice, meses):
+# --- CARGA DE DATOS DESDE LA NUBE A LA MEMORIA ---
+def cargar_datos_desde_bd():
+    if st.session_state.get('datos_cargados', False):
+        return
+
+    try:
+        df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{token}'")
+        df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{token}'")
+        df_crit = conn.query(f"SELECT * FROM okr_criterios WHERE onetrack_id = '{token}'")
+    except Exception:
+        df_kpis, df_okrs, df_crit = pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+
+    for q_name, meses in trimestres.items():
+        for i in range(1, 6):
+            indice = i - 1 # Indice real del DataFrame (0 a 4)
+            
+            # --- Mapeo de KPIs ---
+            kpi_base = f"kpi_{q_name}_{i}"
+            if not df_kpis.empty and indice < len(df_kpis):
+                row = df_kpis.iloc[indice]
+                st.session_state[f"{kpi_base}_nom"] = str(row.get("KPI_Nombre", ""))
+                st.session_state[f"{kpi_base}_tipo"] = str(row.get("Tipo", "Acumulado"))
+                st.session_state[f"{kpi_base}_meta"] = float(row.get("Meta", 0.0))
+                st.session_state[f"{kpi_base}_um"] = str(row.get("UM", "U"))
+                st.session_state[f"{kpi_base}_menor"] = str(row.get("< Mejor", "NO"))
+                st.session_state[f"{kpi_base}_peso"] = float(row.get("Peso_%", 20.0))
+                for mes in meses:
+                    st.session_state[f"{kpi_base}_p_{mes}"] = float(row.get(f"{mes}_P", 0.0))
+                    st.session_state[f"{kpi_base}_r_{mes}"] = float(row.get(f"{mes}_R", 0.0))
+            else:
+                # Valores por defecto si no hay datos
+                st.session_state[f"{kpi_base}_nom"] = ""
+                st.session_state[f"{kpi_base}_tipo"] = "Acumulado"
+                st.session_state[f"{kpi_base}_meta"] = 0.0
+                st.session_state[f"{kpi_base}_um"] = "U"
+                st.session_state[f"{kpi_base}_menor"] = "NO"
+                st.session_state[f"{kpi_base}_peso"] = 20.0
+                for mes in meses:
+                    st.session_state[f"{kpi_base}_p_{mes}"] = 0.0
+                    st.session_state[f"{kpi_base}_r_{mes}"] = 0.0
+
+            # --- Mapeo de OKRs ---
+            okr_base = f"okr_{q_name}_{i}"
+            if not df_okrs.empty and indice < len(df_okrs):
+                row_o = df_okrs.iloc[indice]
+                st.session_state[f"{okr_base}_nom"] = str(row_o.get("OKR_Nombre", ""))
+                st.session_state[f"{okr_base}_obj"] = str(row_o.get("Objetivo", ""))
+                st.session_state[f"{okr_base}_peso"] = float(row_o.get("Peso_%", 20.0))
+            else:
+                st.session_state[f"{okr_base}_nom"] = ""
+                st.session_state[f"{okr_base}_obj"] = ""
+                st.session_state[f"{okr_base}_peso"] = 20.0
+
+            if not df_crit.empty and indice < len(df_crit):
+                row_c = df_crit.iloc[indice]
+                st.session_state[f"{okr_base}_crit"] = str(row_c.get("Criterio_Nombre", ""))
+                st.session_state[f"{okr_base}_crit_meta"] = float(row_c.get("Meta", 0.0))
+                for mes in meses:
+                    st.session_state[f"{okr_base}_p_{mes}"] = float(row_c.get(f"{mes}_P", 0.0))
+                    st.session_state[f"{okr_base}_r_{mes}"] = float(row_c.get(f"{mes}_R", 0.0))
+            else:
+                st.session_state[f"{okr_base}_crit"] = ""
+                st.session_state[f"{okr_base}_crit_meta"] = 0.0
+                for mes in meses:
+                    st.session_state[f"{okr_base}_p_{mes}"] = 0.0
+                    st.session_state[f"{okr_base}_r_{mes}"] = 0.0
+
+    st.session_state.datos_cargados = True
+
+# Ejecutamos la carga antes de pintar la interfaz
+cargar_datos_desde_bd()
+
+# --- FUNCIONES DE INTERFAZ (CELULAS DE CAPTURA) ---
+def renderizar_celula_kpi(indice, q_name, meses):
+    kpi_base = f"kpi_{q_name}_{indice}"
+    
     with st.expander(f"KPI #{indice} - [Clic para editar]", expanded=False):
         c1, c2, c3 = st.columns(3)
-        c1.text_input("Nombre del KPI", key=f"kpi_nom_{indice}_{meses[0]}")
-        c2.selectbox("Tipo", ["Acumulado", "Promedio", "Valor Final"], key=f"kpi_tipo_{indice}_{meses[0]}")
-        c3.number_input("Meta Trimestral", value=0.0, key=f"kpi_meta_{indice}_{meses[0]}")
+        c1.text_input("Nombre del KPI", key=f"{kpi_base}_nom")
+        c2.selectbox("Tipo", ["Acumulado", "Promedio", "Valor Final"], key=f"{kpi_base}_tipo")
+        c3.number_input("Meta Trimestral", key=f"{kpi_base}_meta")
         
         c4, c5, c6 = st.columns(3)
-        c4.selectbox("Unidad de Medida", ["U", "$", "%", "Horas"], key=f"kpi_um_{indice}_{meses[0]}")
-        c5.selectbox("Menor es Mejor?", ["NO", "SI"], key=f"kpi_menor_{indice}_{meses[0]}")
-        c6.number_input("Peso (%)", value=20, key=f"kpi_peso_{indice}_{meses[0]}")
+        c4.selectbox("Unidad de Medida", ["U", "$", "%", "Horas"], key=f"{kpi_base}_um")
+        c5.selectbox("Menor es Mejor?", ["NO", "SI"], key=f"{kpi_base}_menor")
+        c6.number_input("Peso (%)", key=f"{kpi_base}_peso")
         
         st.divider()
         st.write("Avance Mensual")
@@ -50,39 +127,41 @@ def renderizar_celula_kpi(indice, meses):
         for i, mes in enumerate(meses):
             with m_cols[i]:
                 st.markdown(f"**{mes}**")
-                st.number_input("Programado", value=0.0, key=f"kpi_p_{indice}_{mes}")
-                st.number_input("Real", value=0.0, key=f"kpi_r_{indice}_{mes}")
+                st.number_input("Programado", key=f"{kpi_base}_p_{mes}")
+                st.number_input("Real", key=f"{kpi_base}_r_{mes}")
 
-def renderizar_celula_okr(indice, meses):
+def renderizar_celula_okr(indice, q_name, meses):
+    okr_base = f"okr_{q_name}_{indice}"
+    
     with st.expander(f"OKR #{indice} - [Clic para editar]", expanded=False):
-        st.text_input("Nombre del OKR (Prioridad)", key=f"okr_nom_{indice}_{meses[0]}")
-        st.text_area("Objetivo Estrategico", key=f"okr_obj_{indice}_{meses[0]}", height=68)
-        st.number_input("Peso Global del OKR (%)", value=20, key=f"okr_peso_{indice}_{meses[0]}")
+        st.text_input("Nombre del OKR (Prioridad)", key=f"{okr_base}_nom")
+        st.text_area("Objetivo Estrategico", height=68, key=f"{okr_base}_obj")
+        st.number_input("Peso Global del OKR (%)", key=f"{okr_base}_peso")
         
         st.divider()
         st.write("Criterio de Exito Principal")
         col_c1, col_c2 = st.columns(2)
-        col_c1.text_input("Nombre del Criterio", key=f"okr_crit_{indice}_{meses[0]}")
-        col_c2.number_input("Meta del Criterio", value=0.0, key=f"okr_crit_meta_{indice}_{meses[0]}")
+        col_c1.text_input("Nombre del Criterio", key=f"{okr_base}_crit")
+        col_c2.number_input("Meta del Criterio", key=f"{okr_base}_crit_meta")
         
         st.write("Avance del Criterio")
         m_cols = st.columns(3)
         for i, mes in enumerate(meses):
             with m_cols[i]:
                 st.markdown(f"**{mes}**")
-                st.number_input("Prog.", value=0.0, key=f"okr_p_{indice}_{mes}")
-                st.number_input("Real", value=0.0, key=f"okr_r_{indice}_{mes}")
+                st.number_input("Prog.", key=f"{okr_base}_p_{mes}")
+                st.number_input("Real", key=f"{okr_base}_r_{mes}")
 
 # --- NAVEGACION PRINCIPAL ---
 st.sidebar.title("Panel de Control")
 st.sidebar.caption("Sesion Activa")
 
-# Submenu de navegacion
 menu = st.sidebar.radio("Navegacion:", ["Entrada de Datos", "Dashboard de Resultados"])
 
 st.sidebar.divider()
 if st.sidebar.button("Cerrar Sesion"):
     st.session_state.auth_token = None
+    st.session_state.datos_cargados = False
     st.rerun()
 
 # --- SECCION 1: ENTRADA DE DATOS ---
@@ -99,11 +178,11 @@ if menu == "Entrada de Datos":
             
             st.subheader("1. KPIs (Numeros Inteligentes)")
             for i in range(1, 6): 
-                renderizar_celula_kpi(i, meses_q)
+                renderizar_celula_kpi(i, q_name, meses_q)
                 
             st.subheader("2. OKRs (Prioridades)")
             for i in range(1, 6): 
-                renderizar_celula_okr(i, meses_q)
+                renderizar_celula_okr(i, q_name, meses_q)
                 
     st.sidebar.divider()
     if st.sidebar.button("Guardar Cambios", type="primary"):
@@ -119,8 +198,10 @@ elif menu == "Dashboard de Resultados":
         with tabs_dash[q_idx]:
             st.header(f"Dashboard {q_name}")
             st.info(f"Aqui se mostraran los semaforos y graficas de rendimiento para los meses de {', '.join(trimestres[q_name])}.")
-            # Espacio reservado para los calculos de semaforos que programaremos
             
+    with tabs_dash[4]:
+        st.header("Dashboard Anual")
+        st.info("Aqui visualizaremos el condensado global comparando el desempeño de los 4 trimestres.")
     with tabs_dash[4]:
         st.header("Dashboard Anual")
         st.info("Aqui visualizaremos el condensado global comparando el desempeño de los 4 trimestres.")
