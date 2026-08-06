@@ -216,7 +216,7 @@ def guardar_en_bd():
     v_sob, v_meta, v_med = st.session_state.get("v_sob_i", 100.0), st.session_state.get("v_meta_i", 90.0), st.session_state.get("v_med_i", 89.0)
 
     for i in range(5):
-        k_nom = st.session_state["df_kpi_Q1"]["KPI's Operativos"][i]
+        k_nom = st.session_state["df_kpi_Q1"]["KPI's (Indicadores)"][i]
         if k_nom:
             row = {
                 "onetrack_id": token, "KPI_Nombre": k_nom, "Tipo": st.session_state["df_kpi_Q1"]["Tipo"][i],
