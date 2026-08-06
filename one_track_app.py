@@ -17,10 +17,10 @@ st.markdown("""
         background-color: #ffffff !important; color: #002060 !important; box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     .summary-card {
-        background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%;
+        background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; transition: all 0.3s;
     }
     .summary-title { font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;}
-    .summary-value { font-size: 24px; color: #002060; font-weight: bold; }
+    .summary-value { font-size: 26px; color: #002060; font-weight: bold; }
     .semaforo-container { font-size: 12px; border: 1px solid #ccc; border-radius: 5px; overflow: hidden; }
     .sem-header { background-color: #002060; color: white; text-align: center; font-weight: bold; padding: 4px; }
     .sem-row { display: flex; align-items: center; }
@@ -67,44 +67,37 @@ def calc_cumplimiento(prog, real, menor_mejor="NO"):
         return (real / prog * 100) if prog > 0 else (100.0 if real > 0 else 0.0)
 
 def obtener_color(val, sob, meta, med):
-    if val >= sob: return "#00b050" # Verde Fuerte
-    elif val >= meta: return "#92d050" # Verde Claro
-    elif val > med: return "#ffff00" # Amarillo
-    else: return "#ff0000" # Rojo
+    if val >= sob: return "#00b050" 
+    elif val >= meta: return "#92d050" 
+    elif val > med: return "#ffff00" 
+    else: return "#ff0000" 
 
 def render_footer_meses(df, meses, tipo="kpi"):
-    # Calcula e imprime los recuadros de avance debajo de las tablas
     html_footer = "<div style='display:flex; justify-content:flex-end; gap:10px; margin-top: -10px; margin-bottom: 20px; font-size:13px; align-items:center;'>"
     html_footer += "<div style='font-weight:bold; color:#002060; margin-right:10px;'>Avance Mensual:</div>"
     
+    v_sob = st.session_state.get("v_sob_i", 100.0)
+    v_meta = st.session_state.get("v_meta_i", 90.0)
+    v_med = st.session_state.get("v_med_i", 89.0)
+
     for m in meses:
         total_peso = 0.0
         acumulado = 0.0
         for i in range(len(df)):
-            # Validamos que la fila tenga informacion
             if tipo == "kpi" and str(df["KPI's Operativos"][i]).strip() != "":
-                prog = float(df[f"{m} Prog"][i] or 0)
-                real = float(df[f"{m} Real"][i] or 0)
+                prog, real = float(df[f"{m} Prog"][i] or 0), float(df[f"{m} Real"][i] or 0)
                 peso = float(df["Peso %"][i] or 0)
-                menor = str(df["< Mejor"][i])
-                cump = calc_cumplimiento(prog, real, menor)
+                cump = calc_cumplimiento(prog, real, str(df["< Mejor"][i]))
                 acumulado += cump * (peso / 100.0)
                 total_peso += peso
             elif tipo == "táctica" and str(df["Accion Clave (Tacticas)"][i]).strip() != "":
-                prog = float(df[f"{m} Prog"][i] or 0)
-                real = float(df[f"{m} Real"][i] or 0)
+                prog, real = float(df[f"{m} Prog"][i] or 0), float(df[f"{m} Real"][i] or 0)
                 peso = float(df["%"][i] or 0)
-                cump = calc_cumplimiento(prog, real, "NO") # Hitos siempre son mas=mejor
+                cump = calc_cumplimiento(prog, real, "NO")
                 acumulado += cump * (peso / 100.0)
                 total_peso += peso
         
-        # Calculo final del mes
         avance_mes = (acumulado / (total_peso / 100.0)) if total_peso > 0 else 0.0
-        
-        # Estilos basados en semaforo global
-        v_sob = st.session_state.get("v_sob_i", 100.0)
-        v_meta = st.session_state.get("v_meta_i", 90.0)
-        v_med = st.session_state.get("v_med_i", 89.0)
         color = obtener_color(avance_mes, v_sob, v_meta, v_med)
         txt_color = "black" if color in ["#ffff00", "#92d050"] else "white"
         
@@ -219,11 +212,8 @@ cargar_datos()
 # --- FUNCION DE GUARDADO ---
 def guardar_en_bd():
     kpis_data, okrs_data, crit_data, hitos_data = [], [], [], []
-    peso_k = st.session_state.get("p_kpis", 50.0)
-    peso_o = st.session_state.get("p_okrs", 50.0)
-    v_sob = st.session_state.get("v_sob_i", 100.0)
-    v_meta = st.session_state.get("v_meta_i", 90.0)
-    v_med = st.session_state.get("v_med_i", 89.0)
+    peso_k, peso_o = st.session_state.get("p_kpis", 50.0), st.session_state.get("p_okrs", 50.0)
+    v_sob, v_meta, v_med = st.session_state.get("v_sob_i", 100.0), st.session_state.get("v_meta_i", 90.0), st.session_state.get("v_med_i", 89.0)
 
     for i in range(5):
         k_nom = st.session_state["df_kpi_Q1"]["KPI's Operativos"][i]
@@ -248,7 +238,6 @@ def guardar_en_bd():
                 "Fecha_Inicio": st.session_state.get(f"okr_Q1_{i}_fi", ""), "Fecha_Fin": st.session_state.get(f"okr_Q1_{i}_ff", ""), 
                 "Peso_%": st.session_state.get(f"okr_Q1_{i}_peso", 20.0)
             })
-            
             for c_idx in range(5):
                 c_nom = st.session_state[f"df_crit_Q1_{i}"]["Criterio"][c_idx]
                 if c_nom:
@@ -262,7 +251,6 @@ def guardar_en_bd():
                             c_row[f"{m}_P"] = st.session_state[f"df_crit_{q_n}_{i}"][f"{m} Prog"][c_idx]
                             c_row[f"{m}_R"] = st.session_state[f"df_crit_{q_n}_{i}"][f"{m} Real"][c_idx]
                     crit_data.append(c_row)
-            
             for h_idx in range(5):
                 h_nom = st.session_state[f"df_tact_Q1_{i}"]["Accion Clave (Tacticas)"][h_idx]
                 if h_nom:
@@ -292,6 +280,7 @@ def guardar_en_bd():
     sync_tabla(pd.DataFrame(crit_data), "okr_criterios")
     sync_tabla(pd.DataFrame(hitos_data), "okr_hitos")
 
+
 # --- NAVEGACION PRINCIPAL ---
 tab_overview, tab_reportes = st.tabs(["Overview", "Reportes"])
 
@@ -311,7 +300,7 @@ with tab_overview:
 
     st.write("")
     
-    # TARJETAS SUPERIORES Y SEMAFORO
+    # 1. PLACEHOLDERS PARA TARJETAS SUPERIORES (Se llenan al final para ser reactivos)
     col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
     with col_w:
         st.markdown("<div class='summary-card'><p class='summary-title'>Ponderacion Global</p>", unsafe_allow_html=True)
@@ -320,11 +309,13 @@ with tab_overview:
         peso_o = c_okr.number_input("OKRs (%)", value=st.session_state["peso_okrs"], key="p_okrs")
         st.markdown("</div>", unsafe_allow_html=True)
         
-    with col_s1: st.markdown("<div class='summary-card'><p class='summary-title'>Avance KPIs (Q Actual)</p><p class='summary-value'>-- %</p></div>", unsafe_allow_html=True)
-    with col_s2: st.markdown("<div class='summary-card'><p class='summary-title'>Avance OKRs (Q Actual)</p><p class='summary-value'>-- %</p></div>", unsafe_allow_html=True)
-    with col_s3: st.markdown("<div class='summary-card' style='border-top: 4px solid #28a745;'><p class='summary-title'>Total ONE Track</p><p class='summary-value' style='color:#28a745;'>-- %</p></div>", unsafe_allow_html=True)
+    with col_s1: ph_kpi = st.empty()
+    with col_s2: ph_okr = st.empty()
+    with col_s3: ph_tot = st.empty()
+    
     st.write("")
 
+    # 2. SEMAFORO
     col_sem, col_space = st.columns([2, 3])
     with col_sem:
         st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Exito</div>""", unsafe_allow_html=True)
@@ -344,7 +335,7 @@ with tab_overview:
 
     st.divider()
 
-    # TABS DE TRIMESTRES (DATOS Y FOOTERS DINAMICOS)
+    # 3. TABS DE DATOS
     tabs_q = st.tabs(["Q1", "Q2", "Q3", "Q4"])
     
     for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
@@ -353,7 +344,6 @@ with tab_overview:
             
             # --- KPIs ---
             st.markdown(f"<h3 style='color:#002060;'>KPI's Operativos - {q_name}</h3>", unsafe_allow_html=True)
-            # Guardamos el resultado del editor directo al session_state para que sea reactivo
             st.session_state[f"df_kpi_{q_name}"] = st.data_editor(
                 st.session_state[f"df_kpi_{q_name}"],
                 use_container_width=True, hide_index=True, num_rows="fixed",
@@ -365,7 +355,6 @@ with tab_overview:
                 },
                 key=f"editor_kpi_{q_name}"
             )
-            # Renderizar footer dinamico de KPIs
             render_footer_meses(st.session_state[f"df_kpi_{q_name}"], meses_q, "kpi")
 
             st.write("")
@@ -399,12 +388,74 @@ with tab_overview:
                     use_container_width=True, hide_index=True, num_rows="dynamic",
                     key=f"editor_tact_{q_name}_{i}"
                 )
-                # Renderizar footer dinamico de Tacticas
                 render_footer_meses(st.session_state[f"df_tact_{q_name}_{i}"], meses_q, "táctica")
+
+    # ==========================================
+    # 4. CALCULO REACTIVO Y LLENADO DE TARJETAS
+    # ==========================================
+    avance_kpis, peso_total_kpis = 0.0, 0.0
+    for i in range(5):
+        k_nom = st.session_state["df_kpi_Q1"]["KPI's Operativos"][i]
+        if str(k_nom).strip() != "":
+            peso = float(st.session_state["df_kpi_Q1"]["Peso %"][i] or 0)
+            menor = str(st.session_state["df_kpi_Q1"]["< Mejor"][i])
+            prog_tot, real_tot = 0.0, 0.0
+            for q_n, meses in trimestres.items():
+                df = st.session_state[f"df_kpi_{q_n}"]
+                for m in meses:
+                    prog_tot += float(df[f"{m} Prog"][i] or 0)
+                    real_tot += float(df[f"{m} Real"][i] or 0)
+            cump = calc_cumplimiento(prog_tot, real_tot, menor)
+            avance_kpis += cump * (peso / 100.0)
+            peso_total_kpis += peso
+            
+    if peso_total_kpis > 0: avance_kpis = avance_kpis / (peso_total_kpis / 100.0)
+
+    avance_okrs, peso_total_okrs = 0.0, 0.0
+    for i in range(1, 6):
+        o_nom = st.session_state.get(f"okr_Q1_{i}_nom", "")
+        if str(o_nom).strip() != "":
+            peso_okr = float(st.session_state.get(f"okr_Q1_{i}_peso", 0.0))
+            prog_tot, real_tot = 0.0, 0.0
+            for q_n, meses in trimestres.items():
+                df_c = st.session_state[f"df_crit_{q_n}_{i}"]
+                df_t = st.session_state[f"df_tact_{q_n}_{i}"]
+                for m in meses:
+                    for c_idx in range(5):
+                        if str(df_c["Criterio"][c_idx]).strip() != "":
+                            prog_tot += float(df_c[f"{m} Prog"][c_idx] or 0)
+                            real_tot += float(df_c[f"{m} Real"][c_idx] or 0)
+                    for t_idx in range(5):
+                        if str(df_t["Accion Clave (Tacticas)"][t_idx]).strip() != "":
+                            prog_tot += float(df_t[f"{m} Prog"][t_idx] or 0)
+                            real_tot += float(df_t[f"{m} Real"][t_idx] or 0)
+            cump_okr = calc_cumplimiento(prog_tot, real_tot, "NO")
+            avance_okrs += cump_okr * (peso_okr / 100.0)
+            peso_total_okrs += peso_okr
+            
+    if peso_total_okrs > 0: avance_okrs = avance_okrs / (peso_total_okrs / 100.0)
+
+    total_peso = peso_k + peso_o
+    avance_tot = ((avance_kpis * (peso_k / 100.0)) + (avance_okrs * (peso_o / 100.0))) / (total_peso / 100.0) if total_peso > 0 else 0.0
+
+    c_kpi = obtener_color(avance_kpis, v_sob, v_meta, v_med)
+    c_okr = obtener_color(avance_okrs, v_sob, v_meta, v_med)
+    c_tot = obtener_color(avance_tot, v_sob, v_meta, v_med)
+    
+    txt_kpi = "black" if c_kpi in ["#ffff00", "#92d050"] else "white"
+    txt_okr = "black" if c_okr in ["#ffff00", "#92d050"] else "white"
+    txt_tot = "black" if c_tot in ["#ffff00", "#92d050"] else "white"
+
+    ph_kpi.markdown(f"<div class='summary-card' style='background-color:{c_kpi};'><p class='summary-title' style='color:{txt_kpi};'>Avance KPIs (Acumulado)</p><p class='summary-value' style='color:{txt_kpi};'>{avance_kpis:.1f} %</p></div>", unsafe_allow_html=True)
+    ph_okr.markdown(f"<div class='summary-card' style='background-color:{c_okr};'><p class='summary-title' style='color:{txt_okr};'>Avance OKRs (Acumulado)</p><p class='summary-value' style='color:{txt_okr};'>{avance_okrs:.1f} %</p></div>", unsafe_allow_html=True)
+    ph_tot.markdown(f"<div class='summary-card' style='background-color:{c_tot};'><p class='summary-title' style='color:{txt_tot};'>Total ONE Track</p><p class='summary-value' style='color:{txt_tot};'>{avance_tot:.1f} %</p></div>", unsafe_allow_html=True)
 
 # ==========================================
 # PESTAÑA 2: REPORTES
 # ==========================================
+with tab_reportes:
+    st.title("Reportes")
+    st.info("Aqui se construira el dashboard de graficas leyendo la nueva estructura.")
 with tab_reportes:
     st.title("Reportes")
     st.info("Aqui se construira el dashboard de graficas leyendo la nueva estructura.")
