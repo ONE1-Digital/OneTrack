@@ -30,6 +30,19 @@ st.markdown("""
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
     
+    /* Tarjetas de Resumen */
+    .summary-card {
+        background-color: #ffffff;
+        padding: 20px;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        text-align: center;
+        border-top: 4px solid #002060;
+        height: 100%;
+    }
+    .summary-title { font-size: 14px; color: #666; font-weight: bold; margin-bottom: 10px;}
+    .summary-value { font-size: 24px; color: #002060; font-weight: bold; }
+    
     /* Semaforo Compacto */
     .semaforo-container { font-size: 12px; border: 1px solid #ccc; border-radius: 5px; overflow: hidden; }
     .sem-header { background-color: #002060; color: white; text-align: center; font-weight: bold; padding: 4px; }
@@ -79,7 +92,6 @@ trimestres = {
 
 # --- INICIALIZACION Y CARGA DE DATOS ---
 def init_okr_structure(q_name, i, meses):
-    # Cabecera de Iniciativa
     if f"okr_{q_name}_{i}_nom" not in st.session_state:
         st.session_state[f"okr_{q_name}_{i}_nom"] = ""
         st.session_state[f"okr_{q_name}_{i}_obj"] = ""
@@ -87,14 +99,12 @@ def init_okr_structure(q_name, i, meses):
         st.session_state[f"okr_{q_name}_{i}_ff"] = ""
         st.session_state[f"okr_{q_name}_{i}_peso"] = 20.0
         
-        # DataFrame Criterios (5 filas)
         cols_c = ["Criterio", "Tipo", "Meta", "UM", "< Mejor", "%"]
         for m in meses: cols_c.extend([f"Prog {m}", f"Real {m}"])
         df_c = pd.DataFrame(columns=cols_c)
         for _ in range(5): df_c.loc[len(df_c)] = ["", "Promedio", 0.0, "U", "NO", 20.0] + [0.0]*(len(meses)*2)
         st.session_state[f"df_crit_{q_name}_{i}"] = df_c
         
-        # DataFrame Tacticas (5 filas)
         cols_t = ["Accion Clave (Tacticas)", "Responsable", "Fecha Inicial", "Fecha Fin", "%"]
         for m in meses: cols_t.extend([f"Prog {m}", f"Real {m}"])
         df_t = pd.DataFrame(columns=cols_t)
@@ -104,19 +114,16 @@ def init_okr_structure(q_name, i, meses):
 def cargar_datos():
     if st.session_state.get('datos_cargados', False): return
     
-    # Valores Globales por defecto
     st.session_state["peso_kpis"], st.session_state["peso_okrs"] = 50.0, 50.0
     st.session_state["v_sob"], st.session_state["v_meta"], st.session_state["v_med"] = 100.0, 90.0, 89.0
 
     for q_name, meses in trimestres.items():
-        # KPIs
         data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPI's Operativos": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
         for m in meses:
             data_kpi[f"Prog {m}"] = [0.0]*5
             data_kpi[f"Real {m}"] = [0.0]*5
         st.session_state[f"df_kpi_{q_name}"] = pd.DataFrame(data_kpi)
 
-        # OKRs
         for i in range(1, 6):
             init_okr_structure(q_name, i, meses)
 
@@ -139,21 +146,49 @@ with tab_overview:
     with col_btn:
         if st.button("Guardar Cambios", type="primary", use_container_width=True):
             st.success("Datos guardados (Simulacion)")
-            # Logica de base de datos iria aqui...
 
     st.write("")
     
-    # 2. PONDERACION Y SEMAFORO COMPACTO
-    col_w1, col_w2, col_sem, col_spacer = st.columns([1, 1, 2, 2])
+    # 2. SECCION SUPERIOR: PONDERACION Y AVANCE GLOBAL (RESTAURADA)
+    col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
     
-    with col_w1:
-        st.number_input("Peso Global KPIs (%)", value=st.session_state["peso_kpis"], key="p_kpis")
-    with col_w2:
-        st.number_input("Peso Global OKRs (%)", value=st.session_state["peso_okrs"], key="p_okrs")
+    with col_w:
+        st.markdown("<div class='summary-card'>", unsafe_allow_html=True)
+        st.markdown("<p class='summary-title'>Ponderacion Global</p>", unsafe_allow_html=True)
+        c_kpi, c_okr = st.columns(2)
+        peso_k = c_kpi.number_input("KPIs (%)", value=st.session_state["peso_kpis"], key="p_kpis")
+        peso_o = c_okr.number_input("OKRs (%)", value=st.session_state["peso_okrs"], key="p_okrs")
+        st.markdown("</div>", unsafe_allow_html=True)
         
+    with col_s1:
+        st.markdown(f"""
+            <div class='summary-card'>
+                <p class='summary-title'>Avance KPIs (Q Actual)</p>
+                <p class='summary-value'>-- %</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col_s2:
+        st.markdown(f"""
+            <div class='summary-card'>
+                <p class='summary-title'>Avance OKRs (Q Actual)</p>
+                <p class='summary-value'>-- %</p>
+            </div>
+        """, unsafe_allow_html=True)
+    with col_s3:
+        st.markdown(f"""
+            <div class='summary-card' style='border-top: 4px solid #28a745;'>
+                <p class='summary-title'>Total ONE Track</p>
+                <p class='summary-value' style='color:#28a745;'>-- %</p>
+            </div>
+        """, unsafe_allow_html=True)
+
+    st.write("")
+
+    # 3. SEMAFORO COMPACTO
+    col_sem, col_space = st.columns([2, 3])
     with col_sem:
         st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Exito</div>""", unsafe_allow_html=True)
-        # Filas del semaforo
+        
         c1, c2 = st.columns([2, 1])
         c1.markdown("<div class='sem-label' style='background-color: #00b050;'>Sobresaliente >=</div>", unsafe_allow_html=True)
         v_sob = c2.number_input("sob", value=st.session_state["v_sob"], label_visibility="collapsed", key="v_sob_i")
@@ -173,7 +208,7 @@ with tab_overview:
 
     st.divider()
 
-    # 3. TABS DE TRIMESTRES
+    # 4. TABS DE TRIMESTRES (DATOS)
     tabs_q = st.tabs(["Q1", "Q2", "Q3", "Q4"])
     
     for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
@@ -203,14 +238,12 @@ with tab_overview:
             for i in range(1, 6):
                 st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
                 
-                # Header de la Iniciativa
                 ch1, ch2, ch3, ch4 = st.columns([3, 1, 1, 1])
                 ch1.text_input("Nombre de la Iniciativa", key=f"okr_{q_name}_{i}_nom", label_visibility="collapsed", placeholder="Nombre de la Iniciativa")
                 ch2.text_input("Fecha Inicial", key=f"okr_{q_name}_{i}_fi", label_visibility="collapsed", placeholder="Fecha Inicial")
                 ch3.text_input("Fecha Fin", key=f"okr_{q_name}_{i}_ff", label_visibility="collapsed", placeholder="Fecha Fin")
                 ch4.number_input("Peso %", key=f"okr_{q_name}_{i}_peso", label_visibility="collapsed")
                 
-                # Objetivo y Criterios
                 co1, co2 = st.columns([1, 3])
                 with co1:
                     st.text_area("Objetivo:", key=f"okr_{q_name}_{i}_obj", height=150)
@@ -223,14 +256,13 @@ with tab_overview:
                         key=f"editor_crit_{q_name}_{i}"
                     )
                 
-                # Tacticas (Acciones Clave)
                 st.caption("Accion Clave (Tacticas)")
                 st.session_state[f"df_tact_{q_name}_{i}"] = st.data_editor(
                     st.session_state[f"df_tact_{q_name}_{i}"],
                     use_container_width=True, hide_index=True, num_rows="dynamic",
                     key=f"editor_tact_{q_name}_{i}"
                 )
-                st.write("") # Espaciador entre iniciativas
+                st.write("")
 
 # ==========================================
 # PESTAÑA 2: REPORTES
