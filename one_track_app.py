@@ -277,7 +277,7 @@ def guardar_en_bd():
 # --- UI PRINCIPAL ---
 c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: st.markdown("<div class='img-placeholder'>🖼️ Logo ONE</div>", unsafe_allow_html=True)
-with c_img2: st.markdown("<div class='img-placeholder title-placeholder'>ONE TRACK ESTRATÉGICO</div>", unsafe_allow_html=True)
+with c_img2: st.markdown("<div class='img-placeholder title-placeholder'>ONE TRACK</div>", unsafe_allow_html=True)
 with c_img3: st.markdown("<div class='img-placeholder'>🖼️ Logo Cliente</div>", unsafe_allow_html=True)
 
 c_inf1, c_inf2, c_inf3 = st.columns(3)
