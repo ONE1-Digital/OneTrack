@@ -134,7 +134,7 @@ def cargar_datos():
     st.session_state["dueno_input"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else "Carlos Rivera"
 
     for q_name, meses in trimestres.items():
-        data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPIs-Indicadores": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
+        data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "Indicadores": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
         for m in meses:
             data_kpi[f"{m} Prog"] = [0.0]*5
             data_kpi[f"{m} Real"] = [0.0]*5
