@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import altair as alt
 
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="ONE Track - Workspace", layout="wide")
@@ -72,8 +73,8 @@ def obtener_color(val, sob, meta, med):
     elif val > med: return "#ffff00" 
     else: return "#ff0000" 
 
-def render_footer_meses(df, meses, tipo="kpi"):
-    html_footer = "<div style='display:flex; justify-content:flex-end; gap:10px; margin-top: -10px; margin-bottom: 20px; font-size:13px; align-items:center;'>"
+def render_footer_meses(df, meses):
+    html_footer = "<div style='display:flex; justify-content:flex-start; gap:10px; margin-bottom: 15px; font-size:13px; align-items:center;'>"
     html_footer += "<div style='font-weight:bold; color:#002060; margin-right:10px;'>Avance Mensual:</div>"
     
     v_sob = st.session_state.get("v_sob_i", 100.0)
@@ -81,32 +82,48 @@ def render_footer_meses(df, meses, tipo="kpi"):
     v_med = st.session_state.get("v_med_i", 89.0)
 
     for m in meses:
-        total_peso = 0.0
-        acumulado = 0.0
+        total_peso, acumulado = 0.0, 0.0
         for i in range(len(df)):
-            if tipo == "kpi" and str(df["KPI's Operativos"][i]).strip() != "":
+            if str(df["KPIs-Indicadores"][i]).strip() != "":
                 prog, real = float(df[f"{m} Prog"][i] or 0), float(df[f"{m} Real"][i] or 0)
                 peso = float(df["Peso %"][i] or 0)
                 cump = calc_cumplimiento(prog, real, str(df["< Mejor"][i]))
-                acumulado += cump * (peso / 100.0)
-                total_peso += peso
-            elif tipo == "táctica" and str(df["Accion Clave (Tacticas)"][i]).strip() != "":
-                prog, real = float(df[f"{m} Prog"][i] or 0), float(df[f"{m} Real"][i] or 0)
-                peso = float(df["%"][i] or 0)
-                cump = calc_cumplimiento(prog, real, "NO")
                 acumulado += cump * (peso / 100.0)
                 total_peso += peso
         
         avance_mes = (acumulado / (total_peso / 100.0)) if total_peso > 0 else 0.0
         color = obtener_color(avance_mes, v_sob, v_meta, v_med)
         txt_color = "black" if color in ["#ffff00", "#92d050"] else "white"
-        
         html_footer += f"<div class='footer-box' style='background-color:{color}; color:{txt_color};'>{m}: {avance_mes:.1f}%</div>"
     
     html_footer += "</div>"
     st.markdown(html_footer, unsafe_allow_html=True)
 
-# --- INICIALIZACION Y CARGA DE DATOS ---
+def dibujar_gantt(df_tareas):
+    df_plot = df_tareas.copy()
+    # Filtrar solo tareas que tengan nombre y fechas validas
+    df_plot = df_plot[df_plot["Tarea"].str.strip() != ""]
+    df_plot["Inicio"] = pd.to_datetime(df_plot["Inicio"], errors='coerce')
+    df_plot["Fin"] = pd.to_datetime(df_plot["Fin"], errors='coerce')
+    df_plot = df_plot.dropna(subset=["Inicio", "Fin"])
+    
+    if df_plot.empty:
+        st.info("Agrega fechas de Inicio y Fin en las tareas para generar el diagrama de Gantt.")
+        return
+        
+    df_plot['Nombre Completo'] = df_plot['Jerarquia'] + " " + df_plot['Tarea']
+    df_plot['Estado'] = df_plot['Completado'].apply(lambda x: "Realizado" if x else "Pendiente")
+    
+    chart = alt.Chart(df_plot).mark_bar(cornerRadius=3, height=15).encode(
+        x=alt.X('Inicio', title='Fechas', axis=alt.Axis(format="%b %Y", labelAngle=-45)),
+        x2='Fin',
+        y=alt.Y('Nombre Completo', sort=None, title=''),
+        color=alt.Color('Estado', scale=alt.Scale(domain=['Realizado', 'Pendiente'], range=['#28a745', '#ffc107']))
+    ).properties(height=max(150, len(df_plot)*30))
+    
+    st.altair_chart(chart, use_container_width=True)
+
+# --- INICIALIZACION Y CARGA ---
 def init_okr_structure(q_name, i, meses):
     if f"okr_{q_name}_{i}_nom" not in st.session_state:
         st.session_state[f"okr_{q_name}_{i}_nom"] = ""
@@ -121,22 +138,21 @@ def init_okr_structure(q_name, i, meses):
         for _ in range(5): df_c.loc[len(df_c)] = ["", "Promedio", 0.0, "U", "NO", 20.0] + [0.0]*(len(meses)*2)
         st.session_state[f"df_crit_{q_name}_{i}"] = df_c
         
-        cols_t = ["Accion Clave (Tacticas)", "Responsable", "Fecha Inicial", "Fecha Fin", "%"]
-        for m in meses: cols_t.extend([f"{m} Prog", f"{m} Real"])
-        df_t = pd.DataFrame(columns=cols_t)
-        for _ in range(5): df_t.loc[len(df_t)] = ["", "", "", "", 20.0] + [0.0]*(len(meses)*2)
-        st.session_state[f"df_tact_{q_name}_{i}"] = df_t
+        # Nueva estructura de Tareas (Jerarquia y Fechas)
+        df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"])
+        # Filas ejemplo para la vista dinamica
+        df_t.loc[0] = ["1.", "Ejemplo de Tarea", "Juan", None, None, False]
+        st.session_state[f"df_tareas_{q_name}_{i}"] = df_t
 
 def cargar_datos():
     if st.session_state.get('datos_cargados', False): return
-    
     try:
         df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{token}'")
         df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{token}'")
         df_crit = conn.query(f"SELECT * FROM okr_criterios WHERE onetrack_id = '{token}'")
-        df_hitos = conn.query(f"SELECT * FROM okr_hitos WHERE onetrack_id = '{token}'")
+        df_tareas = conn.query(f"SELECT * FROM iniciativas_tareas WHERE onetrack_id = '{token}'")
     except Exception:
-        df_kpis, df_okrs, df_crit, df_hitos = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+        df_kpis, df_okrs, df_crit, df_tareas = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     if not df_kpis.empty:
         st.session_state["peso_kpis"] = float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0))
@@ -149,7 +165,7 @@ def cargar_datos():
         st.session_state["v_sob"], st.session_state["v_meta"], st.session_state["v_med"] = 100.0, 90.0, 89.0
 
     for q_name, meses in trimestres.items():
-        data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPI's Operativos": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
+        data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPIs-Indicadores": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
         for m in meses:
             data_kpi[f"{m} Prog"] = [0.0]*5
             data_kpi[f"{m} Real"] = [0.0]*5
@@ -157,7 +173,7 @@ def cargar_datos():
         if not df_kpis.empty:
             for i in range(min(5, len(df_kpis))):
                 row = df_kpis.iloc[i]
-                data_kpi["KPI's Operativos"][i] = str(row.get("KPI_Nombre", ""))
+                data_kpi["KPIs-Indicadores"][i] = str(row.get("KPI_Nombre", ""))
                 data_kpi["Tipo"][i] = str(row.get("Tipo", "Promedio"))
                 data_kpi["Meta"][i] = float(row.get("Meta", 0.0))
                 data_kpi["UM"][i] = str(row.get("UM", "U"))
@@ -192,18 +208,14 @@ def cargar_datos():
                         st.session_state[f"df_crit_{q_name}_{i}"].at[c_idx, f"{m} Prog"] = float(r_c.get(f"{m}_P", 0.0))
                         st.session_state[f"df_crit_{q_name}_{i}"].at[c_idx, f"{m} Real"] = float(r_c.get(f"{m}_R", 0.0))
 
-            if not df_hitos.empty:
-                hitos_okr = df_hitos[df_hitos['OKR_ID'] == i]
-                for h_idx in range(min(5, len(hitos_okr))):
-                    r_h = hitos_okr.iloc[h_idx]
-                    st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, "Accion Clave (Tacticas)"] = str(r_h.get("Accion_Clave", ""))
-                    st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, "Responsable"] = str(r_h.get("Responsable", ""))
-                    st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, "Fecha Inicial"] = str(r_h.get("Fecha_Inicio", ""))
-                    st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, "Fecha Fin"] = str(r_h.get("Fecha_Fin", ""))
-                    st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, "%"] = float(r_h.get("Peso_%", 20.0))
-                    for m in meses:
-                        st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, f"{m} Prog"] = float(r_h.get(f"{m}_P", 0.0))
-                        st.session_state[f"df_tact_{q_name}_{i}"].at[h_idx, f"{m} Real"] = float(r_h.get(f"{m}_R", 0.0))
+            if not df_tareas.empty:
+                tar_okr = df_tareas[(df_tareas['Iniciativa_ID'] == i) & (df_tareas['Trimestre'] == q_name)]
+                if not tar_okr.empty:
+                    st.session_state[f"df_tareas_{q_name}_{i}"] = tar_okr[["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]].reset_index(drop=True)
+                    # Forzar tipos
+                    st.session_state[f"df_tareas_{q_name}_{i}"]["Completado"] = st.session_state[f"df_tareas_{q_name}_{i}"]["Completado"].astype(bool)
+                    st.session_state[f"df_tareas_{q_name}_{i}"]["Inicio"] = pd.to_datetime(st.session_state[f"df_tareas_{q_name}_{i}"]["Inicio"]).dt.date
+                    st.session_state[f"df_tareas_{q_name}_{i}"]["Fin"] = pd.to_datetime(st.session_state[f"df_tareas_{q_name}_{i}"]["Fin"]).dt.date
 
     st.session_state.datos_cargados = True
 
@@ -211,12 +223,12 @@ cargar_datos()
 
 # --- FUNCION DE GUARDADO ---
 def guardar_en_bd():
-    kpis_data, okrs_data, crit_data, hitos_data = [], [], [], []
+    kpis_data, okrs_data, crit_data, tareas_data = [], [], [], []
     peso_k, peso_o = st.session_state.get("p_kpis", 50.0), st.session_state.get("p_okrs", 50.0)
     v_sob, v_meta, v_med = st.session_state.get("v_sob_i", 100.0), st.session_state.get("v_meta_i", 90.0), st.session_state.get("v_med_i", 89.0)
 
     for i in range(5):
-        k_nom = st.session_state["df_kpi_Q1"]["KPI's (Indicadores)"][i]
+        k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
         if k_nom:
             row = {
                 "onetrack_id": token, "KPI_Nombre": k_nom, "Tipo": st.session_state["df_kpi_Q1"]["Tipo"][i],
@@ -238,6 +250,7 @@ def guardar_en_bd():
                 "Fecha_Inicio": st.session_state.get(f"okr_Q1_{i}_fi", ""), "Fecha_Fin": st.session_state.get(f"okr_Q1_{i}_ff", ""), 
                 "Peso_%": st.session_state.get(f"okr_Q1_{i}_peso", 20.0)
             })
+            
             for c_idx in range(5):
                 c_nom = st.session_state[f"df_crit_Q1_{i}"]["Criterio"][c_idx]
                 if c_nom:
@@ -251,19 +264,17 @@ def guardar_en_bd():
                             c_row[f"{m}_P"] = st.session_state[f"df_crit_{q_n}_{i}"][f"{m} Prog"][c_idx]
                             c_row[f"{m}_R"] = st.session_state[f"df_crit_{q_n}_{i}"][f"{m} Real"][c_idx]
                     crit_data.append(c_row)
-            for h_idx in range(5):
-                h_nom = st.session_state[f"df_tact_Q1_{i}"]["Accion Clave (Tacticas)"][h_idx]
-                if h_nom:
-                    h_row = {
-                        "onetrack_id": token, "OKR_ID": i, "Accion_Clave": h_nom, "Responsable": st.session_state[f"df_tact_Q1_{i}"]["Responsable"][h_idx],
-                        "Fecha_Inicio": st.session_state[f"df_tact_Q1_{i}"]["Fecha Inicial"][h_idx], "Fecha_Fin": st.session_state[f"df_tact_Q1_{i}"]["Fecha Fin"][h_idx],
-                        "Peso_%": st.session_state[f"df_tact_Q1_{i}"]["%"][h_idx]
-                    }
-                    for q_n, meses in trimestres.items():
-                        for m in meses:
-                            h_row[f"{m}_P"] = st.session_state[f"df_tact_{q_n}_{i}"][f"{m} Prog"][h_idx]
-                            h_row[f"{m}_R"] = st.session_state[f"df_tact_{q_n}_{i}"][f"{m} Real"][h_idx]
-                    hitos_data.append(h_row)
+                    
+            for q_n in trimestres.keys():
+                df_t = st.session_state[f"df_tareas_{q_n}_{i}"]
+                for t_idx, t_row in df_t.iterrows():
+                    if str(t_row.get("Tarea", "")).strip() != "":
+                        tareas_data.append({
+                            "onetrack_id": token, "Iniciativa_ID": i, "Trimestre": q_n,
+                            "Jerarquia": t_row.get("Jerarquia", ""), "Tarea": t_row.get("Tarea", ""),
+                            "Responsable": t_row.get("Responsable", ""), "Inicio": t_row.get("Inicio"),
+                            "Fin": t_row.get("Fin"), "Completado": bool(t_row.get("Completado", False))
+                        })
 
     def sync_tabla(df_nuevo, table_name):
         if df_nuevo.empty: return
@@ -278,11 +289,10 @@ def guardar_en_bd():
     sync_tabla(pd.DataFrame(kpis_data), "kpis")
     sync_tabla(pd.DataFrame(okrs_data), "okrs_general")
     sync_tabla(pd.DataFrame(crit_data), "okr_criterios")
-    sync_tabla(pd.DataFrame(hitos_data), "okr_hitos")
-
+    sync_tabla(pd.DataFrame(tareas_data), "iniciativas_tareas")
 
 # --- NAVEGACION PRINCIPAL ---
-tab_overview, tab_reportes = st.tabs(["Overview", "Reportes"])
+tab_overview, tab_anual = st.tabs(["Overview (Captura)", "Resumen Anual"])
 
 # ==========================================
 # PESTAÑA 1: OVERVIEW (CAPTURA CONDENSADA)
@@ -300,13 +310,12 @@ with tab_overview:
 
     st.write("")
     
-    # 1. PLACEHOLDERS PARA TARJETAS SUPERIORES (Se llenan al final para ser reactivos)
     col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
     with col_w:
         st.markdown("<div class='summary-card'><p class='summary-title'>Ponderacion Global</p>", unsafe_allow_html=True)
         c_kpi, c_okr = st.columns(2)
-        peso_k = c_kpi.number_input("KPIs (%)", value=st.session_state["peso_kpis"], key="p_kpis")
-        peso_o = c_okr.number_input("OKRs (%)", value=st.session_state["peso_okrs"], key="p_okrs")
+        peso_k = c_kpi.number_input("KPIs-Indicadores (%)", value=st.session_state["peso_kpis"], key="p_kpis")
+        peso_o = c_okr.number_input("Iniciativas (%)", value=st.session_state["peso_okrs"], key="p_okrs")
         st.markdown("</div>", unsafe_allow_html=True)
         
     with col_s1: ph_kpi = st.empty()
@@ -315,7 +324,6 @@ with tab_overview:
     
     st.write("")
 
-    # 2. SEMAFORO
     col_sem, col_space = st.columns([2, 3])
     with col_sem:
         st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Exito</div>""", unsafe_allow_html=True)
@@ -335,7 +343,6 @@ with tab_overview:
 
     st.divider()
 
-    # 3. TABS DE DATOS
     tabs_q = st.tabs(["Q1", "Q2", "Q3", "Q4"])
     
     for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
@@ -343,7 +350,11 @@ with tab_overview:
             meses_q = trimestres[q_name]
             
             # --- KPIs ---
-            st.markdown(f"<h3 style='color:#002060;'>KPI's Operativos - {q_name}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='color:#002060;'>KPIs-Indicadores - {q_name}</h3>", unsafe_allow_html=True)
+            
+            # FOOTER (Avance Mensual) ARRIBA de la tabla
+            render_footer_meses(st.session_state[f"df_kpi_{q_name}"], meses_q)
+            
             st.session_state[f"df_kpi_{q_name}"] = st.data_editor(
                 st.session_state[f"df_kpi_{q_name}"],
                 use_container_width=True, hide_index=True, num_rows="fixed",
@@ -355,12 +366,11 @@ with tab_overview:
                 },
                 key=f"editor_kpi_{q_name}"
             )
-            render_footer_meses(st.session_state[f"df_kpi_{q_name}"], meses_q, "kpi")
 
             st.write("")
-            st.markdown(f"<h3 style='color:#002060;'>Iniciativas Estrategicas (OKRs) - {q_name}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='color:#002060;'>Iniciativas - {q_name}</h3>", unsafe_allow_html=True)
             
-            # --- OKRs ---
+            # --- INICIATIVAS ---
             for i in range(1, 6):
                 st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
                 
@@ -370,6 +380,7 @@ with tab_overview:
                 ch3.text_input("Fecha Fin", value=st.session_state[f"okr_{q_name}_{i}_ff"], key=f"okr_{q_name}_{i}_ff", label_visibility="collapsed", placeholder="Fecha Fin")
                 ch4.number_input("Peso %", value=st.session_state[f"okr_{q_name}_{i}_peso"], key=f"okr_{q_name}_{i}_peso", label_visibility="collapsed")
                 
+                # OBJETIVO Y CRITERIOS
                 co1, co2 = st.columns([1, 3])
                 with co1:
                     st.text_area("Objetivo:", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=150)
@@ -382,20 +393,29 @@ with tab_overview:
                         key=f"editor_crit_{q_name}_{i}"
                     )
                 
-                st.caption("Accion Clave (Tacticas)")
-                st.session_state[f"df_tact_{q_name}_{i}"] = st.data_editor(
-                    st.session_state[f"df_tact_{q_name}_{i}"],
-                    use_container_width=True, hide_index=True, num_rows="dynamic",
-                    key=f"editor_tact_{q_name}_{i}"
-                )
-                render_footer_meses(st.session_state[f"df_tact_{q_name}_{i}"], meses_q, "táctica")
+                # TAREAS Y GANTT
+                st.caption("Estructura de Tareas y Diagrama de Gantt")
+                cg1, cg2 = st.columns([1, 1])
+                with cg1:
+                    st.session_state[f"df_tareas_{q_name}_{i}"] = st.data_editor(
+                        st.session_state[f"df_tareas_{q_name}_{i}"],
+                        use_container_width=True, hide_index=True, num_rows="dynamic",
+                        column_config={
+                            "Jerarquia": st.column_config.TextColumn(width="small", help="Ej: 1, 1.1"),
+                            "Inicio": st.column_config.DateColumn(format="YYYY-MM-DD"),
+                            "Fin": st.column_config.DateColumn(format="YYYY-MM-DD")
+                        },
+                        key=f"editor_tareas_{q_name}_{i}"
+                    )
+                with cg2:
+                    dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
+                
+                st.write("")
 
-    # ==========================================
-    # 4. CALCULO REACTIVO Y LLENADO DE TARJETAS
-    # ==========================================
+    # --- CALCULO Y LLENADO REACTIVO ---
     avance_kpis, peso_total_kpis = 0.0, 0.0
     for i in range(5):
-        k_nom = st.session_state["df_kpi_Q1"]["KPI's Operativos"][i]
+        k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
         if str(k_nom).strip() != "":
             peso = float(st.session_state["df_kpi_Q1"]["Peso %"][i] or 0)
             menor = str(st.session_state["df_kpi_Q1"]["< Mejor"][i])
@@ -419,16 +439,13 @@ with tab_overview:
             prog_tot, real_tot = 0.0, 0.0
             for q_n, meses in trimestres.items():
                 df_c = st.session_state[f"df_crit_{q_n}_{i}"]
-                df_t = st.session_state[f"df_tact_{q_n}_{i}"]
                 for m in meses:
                     for c_idx in range(5):
                         if str(df_c["Criterio"][c_idx]).strip() != "":
                             prog_tot += float(df_c[f"{m} Prog"][c_idx] or 0)
                             real_tot += float(df_c[f"{m} Real"][c_idx] or 0)
-                    for t_idx in range(5):
-                        if str(df_t["Accion Clave (Tacticas)"][t_idx]).strip() != "":
-                            prog_tot += float(df_t[f"{m} Prog"][t_idx] or 0)
-                            real_tot += float(df_t[f"{m} Real"][t_idx] or 0)
+            # El avance de la Iniciativa ahora se mide solo por los Criterios de Exito 
+            # (las tareas son accionables graficos)
             cump_okr = calc_cumplimiento(prog_tot, real_tot, "NO")
             avance_okrs += cump_okr * (peso_okr / 100.0)
             peso_total_okrs += peso_okr
@@ -446,16 +463,13 @@ with tab_overview:
     txt_okr = "black" if c_okr in ["#ffff00", "#92d050"] else "white"
     txt_tot = "black" if c_tot in ["#ffff00", "#92d050"] else "white"
 
-    ph_kpi.markdown(f"<div class='summary-card' style='background-color:{c_kpi};'><p class='summary-title' style='color:{txt_kpi};'>Avance KPIs (Acumulado)</p><p class='summary-value' style='color:{txt_kpi};'>{avance_kpis:.1f} %</p></div>", unsafe_allow_html=True)
-    ph_okr.markdown(f"<div class='summary-card' style='background-color:{c_okr};'><p class='summary-title' style='color:{txt_okr};'>Avance OKRs (Acumulado)</p><p class='summary-value' style='color:{txt_okr};'>{avance_okrs:.1f} %</p></div>", unsafe_allow_html=True)
+    ph_kpi.markdown(f"<div class='summary-card' style='background-color:{c_kpi};'><p class='summary-title' style='color:{txt_kpi};'>Avance Indicadores (Acumulado)</p><p class='summary-value' style='color:{txt_kpi};'>{avance_kpis:.1f} %</p></div>", unsafe_allow_html=True)
+    ph_okr.markdown(f"<div class='summary-card' style='background-color:{c_okr};'><p class='summary-title' style='color:{txt_okr};'>Avance Iniciativas (Acumulado)</p><p class='summary-value' style='color:{txt_okr};'>{avance_okrs:.1f} %</p></div>", unsafe_allow_html=True)
     ph_tot.markdown(f"<div class='summary-card' style='background-color:{c_tot};'><p class='summary-title' style='color:{txt_tot};'>Total ONE Track</p><p class='summary-value' style='color:{txt_tot};'>{avance_tot:.1f} %</p></div>", unsafe_allow_html=True)
 
 # ==========================================
-# PESTAÑA 2: REPORTES
+# PESTAÑA 2: RESUMEN ANUAL
 # ==========================================
-with tab_reportes:
-    st.title("Reportes")
-    st.info("Aqui se construira el dashboard de graficas leyendo la nueva estructura.")
-with tab_reportes:
-    st.title("Reportes")
-    st.info("Aqui se construira el dashboard de graficas leyendo la nueva estructura.")
+with tab_anual:
+    st.title("Resumen Anual: ONE Track")
+    st.info("El condensado grafico de Enero a Diciembre estara programado aqui tomando las nuevas estructuras de Gantt y Criterios.")
