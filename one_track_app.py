@@ -103,6 +103,7 @@ def init_okr_structure(q_name, i, meses):
         st.session_state[f"okr_{q_name}_{i}_nom"] = ""
         st.session_state[f"okr_{q_name}_{i}_obj"] = ""
         st.session_state[f"okr_{q_name}_{i}_peso"] = 20.0
+        st.session_state[f"okr_{q_name}_{i}_salud"] = "🟢 En Tiempo"
         
         cols_c = ["Criterio", "Tipo", "Meta", "UM", "< Mejor", "%"]
         for m in meses: cols_c.extend([f"{m} Prog", f"{m} Real"])
@@ -170,10 +171,12 @@ def cargar_datos():
                 st.session_state[f"okr_{q_name}_{i}_nom"] = str(row_o.get("OKR_Nombre", ""))
                 st.session_state[f"okr_{q_name}_{i}_obj"] = str(row_o.get("Objetivo", ""))
                 st.session_state[f"okr_{q_name}_{i}_peso"] = float(row_o.get("Peso_%", 20.0))
+                st.session_state[f"okr_{q_name}_{i}_salud"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
             elif es_nuevo and q_name == "Q1" and i == 1:
                 st.session_state[f"okr_{q_name}_{i}_nom"] = "Expansion Comercial 2026"
                 st.session_state[f"okr_{q_name}_{i}_obj"] = "Abrir mercado en la region norte mejorando la infraestructura logistica."
                 st.session_state[f"okr_{q_name}_{i}_peso"] = 100.0
+                st.session_state[f"okr_{q_name}_{i}_salud"] = "🟢 En Tiempo"
             
             if not df_crit.empty:
                 crit_okr = df_crit[df_crit['OKR_ID'] == i].reset_index(drop=True)
@@ -222,7 +225,7 @@ def guardar_en_bd():
     emp = st.session_state.get("empresa_input", "")
     pue = st.session_state.get("puesto_input", "")
     due = st.session_state.get("dueno_input", "")
-    logo_c = DEFAULT_LOGO_CLIENTE # Mantenemos el logo por defecto en la BD por coherencia de columnas
+    logo_c = DEFAULT_LOGO_CLIENTE
 
     for i in range(5):
         k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
@@ -242,7 +245,12 @@ def guardar_en_bd():
     for i in range(1, 6):
         o_nom = st.session_state.get(f"okr_Q1_{i}_nom", "")
         if o_nom:
-            okrs_data.append({"onetrack_id": token, "OKR_ID": i, "OKR_Nombre": o_nom, "Objetivo": st.session_state.get(f"okr_Q1_{i}_obj", ""), "Peso_%": st.session_state.get(f"okr_Q1_{i}_peso", 20.0)})
+            okrs_data.append({
+                "onetrack_id": token, "OKR_ID": i, "OKR_Nombre": o_nom, 
+                "Objetivo": st.session_state.get(f"okr_Q1_{i}_obj", ""), 
+                "Peso_%": st.session_state.get(f"okr_Q1_{i}_peso", 20.0),
+                "Estatus_Salud": st.session_state.get(f"sel_salud_Q1_{i}", st.session_state.get(f"okr_Q1_{i}_salud", "🟢 En Tiempo"))
+            })
             
             df_c = st.session_state[f"df_crit_Q1_{i}"]
             for c_idx in range(len(df_c)):
@@ -287,7 +295,7 @@ with c_img1:
         st.markdown("<div class='img-placeholder'>Logo ONE</div>", unsafe_allow_html=True)
 
 with c_img2: 
-    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK </div>", unsafe_allow_html=True)
+    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK ESTRATEGICO</div>", unsafe_allow_html=True)
 
 with c_img3: 
     try:
@@ -326,16 +334,16 @@ col_sem, col_space = st.columns([2, 3])
 with col_sem:
     st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Exito</div>""", unsafe_allow_html=True)
     c1, c2 = st.columns([2, 1])
-    c1.markdown("<div class='sem-label' style='background-color:#00b050;'>Sobresaliente </div>", unsafe_allow_html=True)
+    c1.markdown("<div class='sem-label' style='background-color:#00b050;'>Sobresaliente >=</div>", unsafe_allow_html=True)
     v_sob = c2.number_input("sob", value=st.session_state["v_sob_i"], label_visibility="collapsed", key="v_sob_i")
     c3, c4 = st.columns([2, 1])
-    c3.markdown("<div class='sem-label' style='background-color:#92d050;'>Meta </div>", unsafe_allow_html=True)
+    c3.markdown("<div class='sem-label' style='background-color:#92d050;'>Meta >= y <</div>", unsafe_allow_html=True)
     v_meta = c4.number_input("meta", value=st.session_state["v_meta_i"], label_visibility="collapsed", key="v_meta_i")
     c5, c6 = st.columns([2, 1])
-    c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio </div>", unsafe_allow_html=True)
+    c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio > y <=</div>", unsafe_allow_html=True)
     v_med = c6.number_input("med", value=st.session_state["v_med_i"], label_visibility="collapsed", key="v_med_i")
     c7, c8 = st.columns([2, 1])
-    c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo </div>", unsafe_allow_html=True)
+    c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo <=</div>", unsafe_allow_html=True)
     c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:bold; font-size:14px;'>{st.session_state['v_med_i']}%</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
@@ -362,9 +370,15 @@ for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
         
         for i in range(1, 6):
             st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
-            ch1, ch2 = st.columns([4, 1])
+            ch1, ch2, ch3 = st.columns([3, 1, 1])
             ch1.text_input("Nombre de la Iniciativa", value=st.session_state[f"okr_{q_name}_{i}_nom"], key=f"okr_{q_name}_{i}_nom", label_visibility="collapsed", placeholder="Nombre de la Iniciativa")
             ch2.number_input("Peso %", value=st.session_state[f"okr_{q_name}_{i}_peso"], key=f"okr_{q_name}_{i}_peso", label_visibility="collapsed")
+            
+            opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
+            salud_actual = st.session_state.get(f"okr_{q_name}_{i}_salud", "🟢 En Tiempo")
+            if salud_actual not in opciones_salud: salud_actual = "🟢 En Tiempo"
+            
+            st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("Estatus de Salud", options=opciones_salud, index=opciones_salud.index(salud_actual), key=f"sel_salud_{q_name}_{i}_ui", label_visibility="collapsed")
             
             co1, co2 = st.columns([1, 3])
             with co1: st.text_area("Objetivo:", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=150)
@@ -387,6 +401,17 @@ for q_idx, q_name in enumerate(["Q1", "Q2", "Q3", "Q4"]):
                     key=f"ed_tar_{q_name}_{i}"
                 )
             with cg2:
+                # BARRA DE PROGRESO DE TAREAS
+                df_t_prog = st.session_state[f"df_tareas_{q_name}_{i}"]
+                tareas_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
+                total_t = len(tareas_validas)
+                completadas = tareas_validas["Completado"].sum() if total_t > 0 else 0
+                pct = int((completadas / total_t) * 100) if total_t > 0 else 0
+                
+                st.markdown(f"<div style='font-size:14px; font-weight:bold; color:#002060; margin-bottom:5px;'>Avance de Tareas: {completadas}/{total_t} ({pct}%)</div>", unsafe_allow_html=True)
+                st.progress(pct / 100.0)
+                st.write("")
+                
                 dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
             st.write("")
 
