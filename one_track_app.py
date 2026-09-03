@@ -231,7 +231,7 @@ def guardar_en_bd():
         k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
         if k_nom:
             row = {
-                "onetrack_id": token, "Empresa": emp, "Puesto": pue, "Dueno": due, "Logo_Cliente": logo_c,
+                "onetrack_id": token, "Empresa": emp, "Puesto": pue, "Dueño": due, "Logo_Cliente": logo_c,
                 "KPI_Nombre": k_nom, "Tipo": st.session_state["df_kpi_Q1"]["Tipo"][i], "Meta": st.session_state["df_kpi_Q1"]["Meta"][i],
                 "UM": st.session_state["df_kpi_Q1"]["UM"][i], "< Mejor": st.session_state["df_kpi_Q1"]["< Mejor"][i], "Peso_%": st.session_state["df_kpi_Q1"]["Peso %"][i],
                 "Peso_Global_KPI": peso_k, "Peso_Global_OKR": peso_o, "U_SVerde": v_sob, "U_Verde": v_meta, "U_Amarillo": v_med
@@ -295,7 +295,7 @@ with c_img1:
         st.markdown("<div class='img-placeholder'>Logo ONE</div>", unsafe_allow_html=True)
 
 with c_img2: 
-    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK ESTRATEGICO</div>", unsafe_allow_html=True)
+    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK </div>", unsafe_allow_html=True)
 
 with c_img3: 
     try:
