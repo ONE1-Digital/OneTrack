@@ -45,6 +45,8 @@ token = st.session_state.auth_token
 
 # --- CONSTANTES ---
 trimestres = {"Q1": ["Ene", "Feb", "Mar"], "Q2": ["Abr", "May", "Jun"], "Q3": ["Jul", "Ago", "Sep"], "Q4": ["Oct", "Nov", "Dic"]}
+DEFAULT_LOGO_CLIENTE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
+DEFAULT_LOGO_ONE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE.png"
 
 # --- FUNCIONES MATEMATICAS Y DE COLOR ---
 def calc_cump(prog, real, menor_mejor="NO"):
@@ -131,8 +133,6 @@ def cargar_datos():
     st.session_state["empresa_input"] = str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else "Tech Solutions LATAM"
     st.session_state["puesto_input"] = str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else "Director de Operaciones"
     st.session_state["dueno_input"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else "Carlos Rivera"
-    # Se agrega el link del cliente MARBER por defecto para datos dummy
-    st.session_state["logo_input"] = str(df_kpis.iloc[0].get("Logo_Cliente", "")) if not es_nuevo else "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
 
     for q_name, meses in trimestres.items():
         data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPIs-Indicadores": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
@@ -222,7 +222,7 @@ def guardar_en_bd():
     emp = st.session_state.get("empresa_input", "")
     pue = st.session_state.get("puesto_input", "")
     due = st.session_state.get("dueno_input", "")
-    logo_c = st.session_state.get("logo_input", "")
+    logo_c = DEFAULT_LOGO_CLIENTE # Mantenemos el logo por defecto en la BD por coherencia de columnas
 
     for i in range(5):
         k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
@@ -281,10 +281,8 @@ def guardar_en_bd():
 c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 
 with c_img1: 
-    # LOGO ONE
-    url_logo_one = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE.png"
     try:
-        st.image(url_logo_one, use_container_width=True)
+        st.image(DEFAULT_LOGO_ONE, use_container_width=True)
     except:
         st.markdown("<div class='img-placeholder'>Logo ONE</div>", unsafe_allow_html=True)
 
@@ -292,21 +290,15 @@ with c_img2:
     st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK ESTRATEGICO</div>", unsafe_allow_html=True)
 
 with c_img3: 
-    # LOGO CLIENTE
-    url_cliente = st.session_state.get("logo_input", "")
-    if url_cliente != "":
-        try:
-            st.image(url_cliente, use_container_width=True)
-        except:
-            st.markdown("<div class='img-placeholder'>Error al cargar URL</div>", unsafe_allow_html=True)
-    else:
+    try:
+        st.image(DEFAULT_LOGO_CLIENTE, use_container_width=True)
+    except:
         st.markdown("<div class='img-placeholder'>Logo Cliente</div>", unsafe_allow_html=True)
 
-c_inf1, c_inf2, c_inf3, c_inf4 = st.columns(4)
+c_inf1, c_inf2, c_inf3 = st.columns(3)
 st.session_state.empresa_input = c_inf1.text_input("Empresa", value=st.session_state.get("empresa_input", ""))
 st.session_state.puesto_input = c_inf2.text_input("Puesto", value=st.session_state.get("puesto_input", ""))
 st.session_state.dueno_input = c_inf3.text_input("Dueno del One Track", value=st.session_state.get("dueno_input", ""))
-st.session_state.logo_input = c_inf4.text_input("Enlace (URL) del Logo del Cliente", value=st.session_state.get("logo_input", ""))
 
 st.divider()
 
