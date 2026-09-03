@@ -287,7 +287,7 @@ with c_img1:
         st.markdown("<div class='img-placeholder'>Logo ONE</div>", unsafe_allow_html=True)
 
 with c_img2: 
-    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK ESTRATEGICO</div>", unsafe_allow_html=True)
+    st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK </div>", unsafe_allow_html=True)
 
 with c_img3: 
     try:
@@ -326,16 +326,16 @@ col_sem, col_space = st.columns([2, 3])
 with col_sem:
     st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Exito</div>""", unsafe_allow_html=True)
     c1, c2 = st.columns([2, 1])
-    c1.markdown("<div class='sem-label' style='background-color:#00b050;'>Sobresaliente >=</div>", unsafe_allow_html=True)
+    c1.markdown("<div class='sem-label' style='background-color:#00b050;'>Sobresaliente </div>", unsafe_allow_html=True)
     v_sob = c2.number_input("sob", value=st.session_state["v_sob_i"], label_visibility="collapsed", key="v_sob_i")
     c3, c4 = st.columns([2, 1])
-    c3.markdown("<div class='sem-label' style='background-color:#92d050;'>Meta >= y <</div>", unsafe_allow_html=True)
+    c3.markdown("<div class='sem-label' style='background-color:#92d050;'>Meta </div>", unsafe_allow_html=True)
     v_meta = c4.number_input("meta", value=st.session_state["v_meta_i"], label_visibility="collapsed", key="v_meta_i")
     c5, c6 = st.columns([2, 1])
-    c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio > y <=</div>", unsafe_allow_html=True)
+    c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio </div>", unsafe_allow_html=True)
     v_med = c6.number_input("med", value=st.session_state["v_med_i"], label_visibility="collapsed", key="v_med_i")
     c7, c8 = st.columns([2, 1])
-    c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo <=</div>", unsafe_allow_html=True)
+    c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo </div>", unsafe_allow_html=True)
     c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:bold; font-size:14px;'>{st.session_state['v_med_i']}%</div>", unsafe_allow_html=True)
     st.markdown("</div>", unsafe_allow_html=True)
 
