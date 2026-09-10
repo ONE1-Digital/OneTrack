@@ -29,7 +29,7 @@ st.markdown("""
         color: #ffffff !important;
         box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child { display: none; } /* Oculta circulo */
+    [data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child { display: none; }
     [data-testid="stSidebar"] div[role="radiogroup"] > label p { font-weight: 800; font-size: 15px; margin: 0; }
 
     /* Titulos y Secciones */
@@ -58,14 +58,10 @@ def init_db():
     try:
         df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
         if 'nombre' not in df.columns: raise Exception("Faltan columnas")
-        if not (df['username'] == 'ONETest').any():
-            df_test = pd.DataFrame([{"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}])
-            df_final = pd.concat([conn.query("SELECT * FROM usuarios", ttl=0), df_test], ignore_index=True)
-            df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
     except Exception:
+        # Solo crea al Admin. Si el usuario quiere a ONETest, lo creará desde el panel.
         df_admin = pd.DataFrame([
-            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""},
-            {"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}
+            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""}
         ])
         df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
 
@@ -213,7 +209,7 @@ def cargar_datos():
                 for m in meses:
                     data_kpi[f"{m} Prog"][i] = float(row.get(f"{m}_P", 0.0))
                     data_kpi[f"{m} Real"][i] = float(row.get(f"{m}_R", 0.0))
-        elif es_nuevo and token == "ONETest": # GENERADOR DATA DUMMY
+        elif es_nuevo and token == "ONETest": 
             mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
             data_kpi["KPIs Indicadores"][0] = "Ventas Mensuales"
             data_kpi["Meta"][0], data_kpi["UM"][0], data_kpi["Peso %"][0] = 500000, "$", 50.0
@@ -346,6 +342,7 @@ def guardar_en_bd():
 with st.sidebar:
     st.markdown("<h2 style='color:#002060; font-weight:800;'>Navegación</h2>", unsafe_allow_html=True)
     vista_actual = st.radio("Selecciona una vista:", ["Q1", "Q2", "Q3", "Q4", "Resumen Anual", "Configuración de Cuenta"], label_visibility="collapsed")
+    st.divider()
     if st.button("Cerrar Sesión", use_container_width=True):
         st.session_state.user_info = None
         st.rerun()
@@ -453,7 +450,7 @@ if vista_actual in trimestres.keys():
             st.write("")
             dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
             
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True) # Cierra iniciativa-box
 
 elif vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
@@ -511,7 +508,7 @@ for q, meses in trimestres.items():
     for m in meses:
         rk, ro, rtot = get_mes_cump(m, q)
         anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
-        line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas", "Valor": ro}, {"Mes": m, "Tipo": "Integrado", "Valor": rtot}])
+        line_mensual.extend([{"Mes": m, "Tipo": "KPIs Operativos", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
         acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
     anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
 
@@ -545,7 +542,7 @@ if vista_actual == "Resumen Anual":
     ch_m = alt.Chart(df_m).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes', sort=meses_totales, title='', axis=alt.Axis(labelFontWeight="bold")),
         y=alt.Y('Valor', title='', scale=alt.Scale(domain=[0, 120]), axis=alt.Axis(gridColor="#f0f2f6")),
-        color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs', 'Iniciativas', 'Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
+        color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs Operativos', 'Iniciativas Estratégicas', 'Desempeño Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
         tooltip=['Mes', 'Tipo', 'Valor']
     ).properties(height=350)
     st.altair_chart(ch_m, use_container_width=True)
