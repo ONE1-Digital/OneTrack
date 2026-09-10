@@ -33,10 +33,16 @@ st.markdown("""
 conn = st.connection("supabase", type="sql")
 
 def init_db():
+    # Inicializa la tabla de usuarios y se asegura de que tenga las nuevas columnas
     try:
-        conn.query("SELECT * FROM usuarios LIMIT 1")
+        df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
+        if 'nombre' not in df.columns:
+            raise Exception("Faltan columnas actualizadas")
     except Exception:
-        df_admin = pd.DataFrame([{"username": "admin", "password": "admin", "role": "admin", "empresa": "Administrador", "logo_url": ""}])
+        df_admin = pd.DataFrame([{
+            "username": "admin", "password": "admin", "role": "admin", 
+            "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""
+        }])
         df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
 
 init_db()
@@ -49,7 +55,7 @@ if 'user_info' not in st.session_state or st.session_state.user_info is None:
         user = st.text_input("Usuario")
         pwd = st.text_input("Contraseña", type="password")
         if st.button("Entrar", type="primary", use_container_width=True):
-            df_u = conn.query("SELECT * FROM usuarios")
+            df_u = conn.query("SELECT * FROM usuarios", ttl=0)
             match = df_u[(df_u['username'] == user) & (df_u['password'] == pwd)]
             if not match.empty:
                 st.session_state.user_info = match.iloc[0].to_dict()
@@ -67,15 +73,27 @@ if st.session_state.user_info['role'] == 'admin':
         st.session_state.user_info = None
         st.rerun()
     
-    st.subheader("Gestión de Clientes")
-    df_u = conn.query("SELECT * FROM usuarios")
+    st.subheader("Gestión de Bases de Clientes")
+    st.info("Añade un nuevo registro al final de la tabla para crear un cliente. Presiona 'Guardar Usuarios' al terminar.")
+    
+    df_u = conn.query("SELECT * FROM usuarios", ttl=0)
     df_clients = df_u[df_u['role'] == 'client'].copy()
+    
+    # Aseguramos que existan las columnas en la vista
+    for col in ['username', 'password', 'nombre', 'puesto', 'empresa', 'logo_url']:
+        if col not in df_clients.columns: df_clients[col] = ""
     
     edited_clients = st.data_editor(
         df_clients, 
         num_rows="dynamic",
         column_config={
-            "role": st.column_config.TextColumn(disabled=True, default="client")
+            "role": None, # Se oculta para que el admin no se equivoque
+            "username": "Usuario (Token Login)",
+            "password": "Contraseña",
+            "nombre": "Nombre del Dueño",
+            "puesto": "Puesto",
+            "empresa": "Nombre Empresa",
+            "logo_url": "Enlace del Logo (Supabase)"
         },
         use_container_width=True
     )
@@ -85,16 +103,15 @@ if st.session_state.user_info['role'] == 'admin':
         edited_clients['role'] = 'client'
         df_final = pd.concat([df_admin, edited_clients], ignore_index=True)
         df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
-        st.success("Usuarios actualizados correctamente.")
+        st.success("Bases de usuarios guardadas y actualizadas correctamente.")
     st.stop()
 
 # --- CONSTANTES CLIENTE ---
 token = st.session_state.user_info['username']
-empresa_activa = st.session_state.user_info['empresa']
-logo_cliente = st.session_state.user_info['logo_url']
 trimestres = {"Q1": ["Ene", "Feb", "Mar"], "Q2": ["Abr", "May", "Jun"], "Q3": ["Jul", "Ago", "Sep"], "Q4": ["Oct", "Nov", "Dic"]}
 meses_totales = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
 DEFAULT_LOGO_ONE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE.png"
+DEFAULT_LOGO_CLIENTE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
 
 # --- FUNCIONES MATEMATICAS Y DE COLOR ---
 def calc_cump(prog, real, menor_mejor="NO"):
@@ -165,21 +182,31 @@ def init_okr_structure(q_name, i, meses):
 def cargar_datos():
     if st.session_state.get('datos_cargados', False): return
     try:
-        df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{token}'")
-        df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{token}'")
-        df_crit = conn.query(f"SELECT * FROM okr_criterios WHERE onetrack_id = '{token}'")
-        df_tareas = conn.query(f"SELECT * FROM iniciativas_tareas WHERE onetrack_id = '{token}'")
+        df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{token}'", ttl=0)
+        df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{token}'", ttl=0)
+        df_crit = conn.query(f"SELECT * FROM okr_criterios WHERE onetrack_id = '{token}'", ttl=0)
+        df_tareas = conn.query(f"SELECT * FROM iniciativas_tareas WHERE onetrack_id = '{token}'", ttl=0)
     except Exception:
         df_kpis, df_okrs, df_crit, df_tareas = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
     es_nuevo = df_kpis.empty
+
     st.session_state["p_kpis"] = float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0)) if not es_nuevo else 50.0
     st.session_state["p_okrs"] = float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0
     st.session_state["v_sob_i"] = float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0
     st.session_state["v_meta_i"] = float(df_kpis.iloc[0].get("U_Verde", 90.0)) if not es_nuevo else 90.0
     st.session_state["v_med_i"] = float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0
-    st.session_state["puesto_input"] = str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else "Director"
-    st.session_state["dueno_input"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else "Líder"
+    
+    # Prioridad: Lo que guardó el admin, si no hay info, lo que había en la DB, y si no, texto vacío
+    u_empresa = st.session_state.user_info.get("empresa", "")
+    u_puesto = st.session_state.user_info.get("puesto", "")
+    u_nombre = st.session_state.user_info.get("nombre", "")
+    u_logo = st.session_state.user_info.get("logo_url", "")
+    
+    st.session_state["empresa_input"] = str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else u_empresa
+    st.session_state["puesto_input"] = str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else u_puesto
+    st.session_state["dueno_input"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else u_nombre
+    st.session_state["logo_input"] = str(df_kpis.iloc[0].get("Logo_Cliente", "")) if not es_nuevo else u_logo
 
     for q_name, meses in trimestres.items():
         data_kpi = {"No.": ["#1", "#2", "#3", "#4", "#5"], "KPIs-Indicadores": [""]*5, "Tipo": ["Promedio"]*5, "Meta": [0.0]*5, "UM": ["U"]*5, "< Mejor": ["NO"]*5, "Peso %": [20.0]*5}
@@ -240,13 +267,14 @@ def guardar_en_bd():
     kpis_data, okrs_data, crit_data, tareas_data = [], [], [], []
     peso_k, peso_o = st.session_state.get("p_kpis", 50.0), st.session_state.get("p_okrs", 50.0)
     v_sob, v_meta, v_med = st.session_state.get("v_sob_i", 100.0), st.session_state.get("v_meta_i", 90.0), st.session_state.get("v_med_i", 89.0)
-    pue, due = st.session_state.get("puesto_input", ""), st.session_state.get("dueno_input", "")
+    pue, due, emp = st.session_state.get("puesto_input", ""), st.session_state.get("dueno_input", ""), st.session_state.get("empresa_input", "")
+    logo_c = st.session_state.get("logo_input", "")
 
     for i in range(5):
         k_nom = st.session_state["df_kpi_Q1"]["KPIs-Indicadores"][i]
         if k_nom:
             row = {
-                "onetrack_id": token, "Puesto": pue, "Dueno": due,
+                "onetrack_id": token, "Empresa": emp, "Puesto": pue, "Dueno": due, "Logo_Cliente": logo_c,
                 "KPI_Nombre": k_nom, "Tipo": st.session_state["df_kpi_Q1"]["Tipo"][i], "Meta": st.session_state["df_kpi_Q1"]["Meta"][i],
                 "UM": st.session_state["df_kpi_Q1"]["UM"][i], "< Mejor": st.session_state["df_kpi_Q1"]["< Mejor"][i], "Peso_%": st.session_state["df_kpi_Q1"]["Peso %"][i],
                 "Peso_Global_KPI": peso_k, "Peso_Global_OKR": peso_o, "U_SVerde": v_sob, "U_Verde": v_meta, "U_Amarillo": v_med
@@ -284,10 +312,14 @@ def guardar_en_bd():
     def sync_tabla(df_nuevo, table_name):
         if df_nuevo.empty: return
         try:
-            df_total = conn.query(f"SELECT * FROM {table_name}")
-            df_otros = df_total[df_total['onetrack_id'] != token]
-            df_final = pd.concat([df_otros, df_nuevo], ignore_index=True)
-        except Exception: df_final = df_nuevo
+            df_total = conn.query(f"SELECT * FROM {table_name}", ttl=0)
+            if not df_total.empty and 'onetrack_id' in df_total.columns:
+                df_otros = df_total[df_total['onetrack_id'] != token]
+                df_final = pd.concat([df_otros, df_nuevo], ignore_index=True)
+            else:
+                df_final = df_nuevo
+        except Exception: 
+            df_final = df_nuevo
         df_final.to_sql(table_name, con=conn.engine, if_exists='replace', index=False)
 
     sync_tabla(pd.DataFrame(kpis_data), "kpis")
@@ -300,7 +332,7 @@ with st.expander("⚙️ Configuración de Cuenta y Cierre de Sesión"):
     st.write(f"**Usuario Actual:** {token}")
     n_pwd = st.text_input("Cambiar Contraseña", type="password")
     if st.button("Actualizar Contraseña"):
-        df_us = conn.query("SELECT * FROM usuarios")
+        df_us = conn.query("SELECT * FROM usuarios", ttl=0)
         df_us.loc[df_us['username'] == token, 'password'] = n_pwd
         df_us.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
         st.success("Contraseña actualizada.")
@@ -314,11 +346,13 @@ with c_img1:
     except: st.markdown("<div class='img-placeholder'>Logo ONE</div>", unsafe_allow_html=True)
 with c_img2: st.markdown("<div class='img-placeholder title-placeholder' style='border:none;'>ONE TRACK</div>", unsafe_allow_html=True)
 with c_img3: 
-    try: st.image(logo_cliente if logo_cliente else "https://via.placeholder.com/300x100?text=Logo+Cliente", use_container_width=True)
+    logo_cliente = st.session_state.get("logo_input", "")
+    if not logo_cliente: logo_cliente = DEFAULT_LOGO_CLIENTE
+    try: st.image(logo_cliente, use_container_width=True)
     except: st.markdown("<div class='img-placeholder'>Logo Cliente</div>", unsafe_allow_html=True)
 
 c_inf1, c_inf2, c_inf3 = st.columns(3)
-st.markdown(f"<h4 style='text-align:center; color:#002060;'>Empresa: {empresa_activa}</h4>", unsafe_allow_html=True)
+st.markdown(f"<h4 style='text-align:center; color:#002060;'>Empresa: {st.session_state.get('empresa_input', '')}</h4>", unsafe_allow_html=True)
 st.session_state.puesto_input = c_inf2.text_input("Puesto", value=st.session_state.get("puesto_input", ""))
 st.session_state.dueno_input = c_inf3.text_input("Dueño del One Track", value=st.session_state.get("dueno_input", ""))
 
@@ -463,21 +497,18 @@ for q, meses in trimestres.items():
         anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
         line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas", "Valor": ro}, {"Mes": m, "Tipo": "Integrado", "Valor": rtot}])
         acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
-    # Promedio del Quarter
     anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
 
 df_anual = pd.DataFrame(anual_data)
 
 with tabs_main[4]:
-    st.markdown("<h2 style='color:#002060;'>Resumen Anual: ONE Track</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#002060;'>Resumen Anual: ONE TRACK</h2>", unsafe_allow_html=True)
     
-    col_t, col_ch = st.columns([1.2, 1])
-    with col_t:
+    col_ta, col_ch = st.columns([1.2, 1])
+    with col_ta:
         st.markdown("<h4 style='color:#002060;'>Desempeño Mensual y Trimestral</h4>", unsafe_allow_html=True)
         st.dataframe(
-            df_anual.style.format({
-                "KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"
-            }), 
+            df_anual.style.format({"KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), 
             use_container_width=True, hide_index=True
         )
     
@@ -491,21 +522,18 @@ with tabs_main[4]:
             y=alt.Y('Resultado Q', title='', scale=alt.Scale(domain=[0, 120])),
             tooltip=['Trimestre', 'Resultado Q']
         ).properties(height=250)
-        
         text_q = ch_q.mark_text(align='center', baseline='bottom', dy=-10, fontWeight='bold').encode(text=alt.Text('Resultado Q:Q', format='.0f'))
         st.altair_chart(ch_q + text_q, use_container_width=True)
 
     st.divider()
     st.markdown("<h4 style='color:#002060; text-align:center;'>Desempeño Mensual</h4>", unsafe_allow_html=True)
     df_m = pd.DataFrame(line_mensual)
-    
     ch_m = alt.Chart(df_m).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes', sort=meses_totales, title=''),
         y=alt.Y('Valor', title='', scale=alt.Scale(domain=[0, 120])),
         color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs', 'Iniciativas', 'Integrado'], range=['#377eb8', '#4daf4a', '#ff7f00']), legend=alt.Legend(title="", orient='bottom')),
         tooltip=['Mes', 'Tipo', 'Valor']
     ).properties(height=300)
-    
     st.altair_chart(ch_m, use_container_width=True)
 
 # --- CALCULO REACTIVO TARJETAS FRONTALES ---
