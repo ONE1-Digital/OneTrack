@@ -15,10 +15,27 @@ st.markdown("""
     
     /* Barra Lateral */
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
-    
+    [data-testid="stSidebar"] div[role="radiogroup"] > label {
+        background-color: #f8f9fa;
+        padding: 12px 20px;
+        border-radius: 8px;
+        margin-bottom: 8px;
+        border: 1px solid #e5e7eb;
+        color: #002060 !important;
+        transition: all 0.2s;
+    }
+    [data-testid="stSidebar"] div[role="radiogroup"] > label:hover { background-color: #e2e8f0; }
+    [data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
+        background-color: #002060 !important;
+        color: #ffffff !important;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    [data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child { display: none; }
+    [data-testid="stSidebar"] div[role="radiogroup"] > label p { font-weight: 800; font-size: 15px; margin: 0; }
+
     /* Titulos y Secciones */
     .section-title { font-size: 24px; font-weight: 800; color: #002060; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
-    .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+    .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;}
     .title-placeholder { font-size: 32px; font-weight: 800; color: #002060; display: flex; align-items: center; justify-content: center; height: 80px; letter-spacing: 2px; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 100px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
     
@@ -29,7 +46,12 @@ st.markdown("""
     .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); }
     .iniciativa-header { font-size: 18px; font-weight: 800; color: #ffffff; background-color: #002060; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; display: inline-block;}
     
-    /* Ajustes Generales */
+    /* Configuración Semáforo (Diseño de Tabla) */
+    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+    .sem-header { background-color: #002060; color: white; text-align: center; font-weight: 800; padding: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
+    .sem-label { padding: 8px 15px; font-weight: 800; text-align: right; border-bottom: 1px solid #f9fafb; font-size: 14px; color: black; display: flex; align-items: center; justify-content: flex-end;}
+    
+    /* Ajustes Generales de Tabla */
     div[data-testid="stDataFrame"] > div { border: 1px solid #002060; border-radius: 8px; overflow: hidden; }
     .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 800; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     </style>
@@ -457,10 +479,28 @@ elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
     st.markdown("<div class='sub-section-title'>Configuración de Semáforos (%)</div>", unsafe_allow_html=True)
     st.info("Estos rangos definen qué colores se mostrarán automáticamente en tus recuadros de avance de todo el año.")
-    c1, c2, c3 = st.columns(3)
-    st.session_state._v_sob = c1.number_input("**Sobresaliente (Color Verde Oscuro)**", value=st.session_state.get("_v_sob", 100.0), key="cfg_sob")
-    st.session_state._v_meta = c2.number_input("**Meta (Color Verde Claro)**", value=st.session_state.get("_v_meta", 90.0), key="cfg_meta")
-    st.session_state._v_med = c3.number_input("**Medio (Color Amarillo)**", value=st.session_state.get("_v_med", 80.0), key="cfg_med")
+    
+    col_sem, col_space = st.columns([2, 3])
+    with col_sem:
+        st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Éxito</div>""", unsafe_allow_html=True)
+        
+        c1, c2 = st.columns([2, 1])
+        c1.markdown("<div class='sem-label' style='background-color:#00b050; color:white;'>Sobresaliente</div>", unsafe_allow_html=True)
+        st.session_state._v_sob = c2.number_input("sob", value=st.session_state.get("_v_sob", 100.0), label_visibility="collapsed", key="cfg_sob")
+        
+        c3, c4 = st.columns([2, 1])
+        c3.markdown("<div class='sem-label' style='background-color:#92d050; color:white;'>Meta</div>", unsafe_allow_html=True)
+        st.session_state._v_meta = c4.number_input("meta", value=st.session_state.get("_v_meta", 90.0), label_visibility="collapsed", key="cfg_meta")
+        
+        c5, c6 = st.columns([2, 1])
+        c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio</div>", unsafe_allow_html=True)
+        st.session_state._v_med = c6.number_input("med", value=st.session_state.get("_v_med", 80.0), label_visibility="collapsed", key="cfg_med")
+        
+        c7, c8 = st.columns([2, 1])
+        c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo</div>", unsafe_allow_html=True)
+        c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:800; font-size:16px;'>{st.session_state.get('_v_med', 80.0)}%</div>", unsafe_allow_html=True)
+        st.markdown("</div>", unsafe_allow_html=True)
+
     st.markdown("<br><div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
     n_pwd = st.text_input("**Nueva Contraseña**", type="password", placeholder="Escribe aquí para cambiar tu contraseña")
