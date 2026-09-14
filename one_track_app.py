@@ -271,10 +271,13 @@ def cargar_datos():
     es_nuevo = df_kpis.empty
     
     for q_name in trimestres.keys():
-        if not df_okrs.empty:
+        if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
             q_okrs = df_okrs[df_okrs['Trimestre_ID'] == q_name] if 'Trimestre_ID' in df_okrs.columns else df_okrs
-            max_id = q_okrs["OKR_ID"].max()
-            st.session_state[f"num_iniciativas_{q_name}"] = int(max_id) if pd.notna(max_id) else 1
+            if 'OKR_ID' in q_okrs.columns:
+                max_id = q_okrs["OKR_ID"].max()
+                st.session_state[f"num_iniciativas_{q_name}"] = int(max_id) if pd.notna(max_id) else 1
+            else:
+                st.session_state[f"num_iniciativas_{q_name}"] = 1
         else:
             st.session_state[f"num_iniciativas_{q_name}"] = 1
 
@@ -308,16 +311,22 @@ def cargar_datos():
         for i in range(1, st.session_state[f"num_iniciativas_{q_name}"] + 1):
             init_okr_structure(q_name, i, meses)
             
-            q_okrs_db = df_okrs[(df_okrs['Trimestre_ID'] == q_name) if 'Trimestre_ID' in df_okrs.columns else (df_okrs['OKR_ID'] == i)]
-            if not es_nuevo and not q_okrs_db[q_okrs_db['OKR_ID'] == i].empty:
-                row_o = q_okrs_db[q_okrs_db['OKR_ID'] == i].iloc[0]
-                st.session_state[f"ui_nom_{q_name}_{i}"] = str(row_o.get("OKR_Nombre", ""))
-                st.session_state[f"ui_obj_{q_name}_{i}"] = str(row_o.get("Objetivo", ""))
-                st.session_state[f"ui_peso_{q_name}_{i}"] = float(row_o.get("Peso_%", 20.0))
-                st.session_state[f"ui_salud_{q_name}_{i}"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
+            if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
+                q_okrs_db = df_okrs[df_okrs['Trimestre_ID'] == q_name] if 'Trimestre_ID' in df_okrs.columns else df_okrs
+                match_okr = q_okrs_db[q_okrs_db['OKR_ID'] == i]
+                if not es_nuevo and not match_okr.empty:
+                    row_o = match_okr.iloc[0]
+                    st.session_state[f"ui_nom_{q_name}_{i}"] = str(row_o.get("OKR_Nombre", ""))
+                    st.session_state[f"ui_obj_{q_name}_{i}"] = str(row_o.get("Objetivo", ""))
+                    st.session_state[f"ui_peso_{q_name}_{i}"] = float(row_o.get("Peso_%", 20.0))
+                    st.session_state[f"ui_salud_{q_name}_{i}"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
             
-            if not df_crit.empty:
-                crit_okr = df_crit[(df_crit['OKR_ID'] == i) & (df_crit['Trimestre_ID'] == q_name) if 'Trimestre_ID' in df_crit.columns else (df_crit['OKR_ID'] == i)].reset_index(drop=True)
+            if not df_crit.empty and 'OKR_ID' in df_crit.columns:
+                if 'Trimestre_ID' in df_crit.columns:
+                    crit_okr = df_crit[(df_crit['OKR_ID'] == i) & (df_crit['Trimestre_ID'] == q_name)].reset_index(drop=True)
+                else:
+                    crit_okr = df_crit[(df_crit['OKR_ID'] == i)].reset_index(drop=True)
+                    
                 if len(crit_okr) > 0:
                     df_c_temp = pd.DataFrame(columns=st.session_state[f"df_crit_{q_name}_{i}"].columns)
                     for c_idx in range(len(crit_okr)):
@@ -327,7 +336,7 @@ def cargar_datos():
                         df_c_temp.loc[len(df_c_temp) + 1] = c_row
                     st.session_state[f"df_crit_{q_name}_{i}"] = df_c_temp
 
-            if not df_tareas.empty:
+            if not df_tareas.empty and 'Iniciativa_ID' in df_tareas.columns and 'Trimestre' in df_tareas.columns:
                 tar_okr = df_tareas[(df_tareas['Iniciativa_ID'] == i) & (df_tareas['Trimestre'] == q_name)]
                 if not tar_okr.empty:
                     df_t = tar_okr[["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]].reset_index(drop=True)
@@ -450,13 +459,13 @@ with st.sidebar:
 # --- UI PRINCIPAL HEADER E IDENTIFICACION ---
 c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: 
-    st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 90px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img2: 
     st.markdown(f"<div class='img-placeholder' style='border:none; box-shadow:none; background:transparent;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 120px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img3: 
     logo_c = st.session_state.get("logo_input", "")
     if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
-    st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 90px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 
 c_inf1, c_inf2, c_inf3 = st.columns(3)
 with c_inf1:
@@ -740,7 +749,9 @@ if st.session_state.vista_actual == "Resumen Anual":
     col_ta, col_ch = st.columns([1.2, 1])
     with col_ta:
         st.markdown("<div class='sub-section-title'>Desempeño Mensual y Trimestral</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
         st.dataframe(df_anual.style.format({"KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), use_container_width=True, hide_index=True)
+        st.markdown("</div>", unsafe_allow_html=True)
     
     with col_ch:
         st.markdown("<div class='sub-section-title' style='text-align:center;'>Desempeño Trimestral</div>", unsafe_allow_html=True)
