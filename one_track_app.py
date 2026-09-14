@@ -13,43 +13,34 @@ st.markdown("""
     /* Fondos y contenedores */
     .stApp { background-color: #f4f6f9; }
     
-    /* Barra Lateral */
+    /* Barra Lateral de Navegación */
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label {
-        background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 8px;
-        border: 1px solid #e5e7eb; color: #002060 !important; transition: all 0.2s;
-    }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label:hover { background-color: #e2e8f0; }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
-        background-color: #002060 !important; color: #ffffff !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child { display: none; }
-    [data-testid="stSidebar"] div[role="radiogroup"] > label p { font-weight: 800; font-size: 15px; margin: 0; }
+    [data-testid="stSidebar"] button[data-baseweb="button"] { border-radius: 8px; margin-bottom: 5px; border: 1px solid transparent; transition: all 0.2s;}
+    [data-testid="stSidebar"] button[kind="secondary"] { background-color: #f8f9fa; color: #4b5563; border: 1px solid #e5e7eb;}
+    [data-testid="stSidebar"] button[kind="secondary"]:hover { background-color: #e2e8f0; }
+    [data-testid="stSidebar"] button[kind="primary"] { background-color: #002060 !important; color: #ffffff !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none;}
+    [data-testid="stSidebar"] button p { font-size: 18px !important; font-weight: 900 !important; margin: 0; }
 
-    /* Titulos y Secciones */
-    .section-title { font-size: 24px; font-weight: 800; color: #002060; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
-    .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .title-placeholder { display: flex; align-items: center; justify-content: center; height: 100px; background-color: transparent; border: none; box-shadow: none; }
-    .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 100px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+    /* Titulos, Etiquetas y Secciones */
+    .section-title { font-size: 26px; font-weight: 900; color: #002060; border-bottom: 3px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
+    .sub-section-title { font-size: 15px; font-weight: 900; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
+    .custom-label { font-size: 14px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+    
+    .title-placeholder { display: flex; align-items: center; justify-content: center; height: 160px; background-color: transparent; border: none; box-shadow: none; }
+    .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 160px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
     
     /* Tarjetas Blancas (Cards) */
     .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; }
-    .summary-title { font-size: 14px; color: #4b5563; font-weight: 800; margin-bottom: 5px; text-transform: uppercase;}
-    .summary-value { font-size: 28px; color: #002060; font-weight: 800; }
+    .summary-title { font-size: 14px; color: #4b5563; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;}
+    .summary-value { font-size: 28px; color: #002060; font-weight: 900; }
     .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
-    .iniciativa-header { font-size: 18px; font-weight: 800; color: #ffffff; background-color: #002060; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; display: inline-block;}
+    .iniciativa-header { font-size: 20px; font-weight: 900; color: #ffffff; background-color: #002060; padding: 10px 20px; border-radius: 8px; display: inline-block;}
     
     /* Ajustes Estéticos para las Tablas (Anti-plano) */
     div[data-testid="stDataFrame"] > div { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 12px rgba(0,0,0,0.08); background-color: #ffffff; padding: 4px; border: 1px solid #e2e8f0; }
-    .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 800; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    div[data-testid="stDataFrame"] table th { background-color: #002060 !important; color: #ffffff !important; font-size: 15px !important; font-weight: 900 !important; text-transform: uppercase; text-align: center !important;}
     
-    /* Etiquetas del UI */
-    label p { font-weight: 800 !important; color: #002060 !important; }
-    
-    /* Configuración de Semáforo en Anual */
-    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-top: 10px; margin-bottom: 10px;}
-    .sem-header { background-color: #002060; color: white; text-align: center; font-weight: 800; padding: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
-    .sem-label { padding: 8px 15px; font-weight: 800; text-align: right; border-bottom: 1px solid #f9fafb; font-size: 14px; color: black; display: flex; align-items: center; justify-content: flex-end;}
+    .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 900; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     </style>
 """, unsafe_allow_html=True)
 
@@ -67,21 +58,59 @@ def init_db():
     try:
         df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
         if 'nombre' not in df.columns: raise Exception("Faltan columnas")
+        if not (df['username'] == 'ONETest').any():
+            df_test = pd.DataFrame([{"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}])
+            df_final = pd.concat([conn.query("SELECT * FROM usuarios", ttl=0), df_test], ignore_index=True)
+            df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
     except Exception:
         df_admin = pd.DataFrame([
-            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""}
+            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""},
+            {"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}
         ])
         df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
 
 init_db()
 
+# --- FUNCION DE DATOS DUMMY PARA ONETEST (EJECUCION UNICA) ---
+def generar_dummy_onetest():
+    k = conn.query("SELECT * FROM kpis WHERE onetrack_id = 'ONETest'", ttl=0)
+    if not k.empty: return # Si ya tiene datos, cancela la inyección
+    
+    kpis, okrs, crits, tareas = [], [], [], []
+    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
+    
+    k1 = {"onetrack_id": "ONETest", "Empresa": "ONE TRACK Test", "Puesto": "Director General", "Dueno": "Usuario de Prueba", "Logo_Cliente": "", "KPI_Nombre": "Ventas Mensuales", "Tipo": "Promedio", "Meta": 500000, "UM": "$", "< Mejor": "NO", "Peso_%": 50.0, "Peso_Global_KPI": 50.0, "Peso_Global_OKR": 50.0, "U_SVerde": 100, "U_Verde": 90, "U_Amarillo": 80}
+    k2 = {"onetrack_id": "ONETest", "Empresa": "ONE TRACK Test", "Puesto": "Director General", "Dueno": "Usuario de Prueba", "Logo_Cliente": "", "KPI_Nombre": "Satisfacción de Clientes", "Tipo": "Promedio", "Meta": 95, "UM": "%", "< Mejor": "NO", "Peso_%": 50.0, "Peso_Global_KPI": 50.0, "Peso_Global_OKR": 50.0, "U_SVerde": 100, "U_Verde": 90, "U_Amarillo": 80}
+    
+    for q, m_list in trimestres.items():
+        for m in m_list:
+            k1[f"{m}_P"] = 100000; k1[f"{m}_R"] = 100000 * mult_q[q]
+            k2[f"{m}_P"] = 95; k2[f"{m}_R"] = 95 * mult_q[q]
+    kpis.extend([k1, k2])
+    
+    for i in range(1, 6):
+        if i == 1:
+            okrs.append({"onetrack_id": "ONETest", "OKR_ID": i, "OKR_Nombre": "Expansión de Mercado Norte", "Objetivo": "Conquistar 3 nuevos estados mediante campañas.", "Peso_%": 100.0, "Estatus_Salud": "🟢 En Tiempo"})
+            c_row = {"onetrack_id": "ONETest", "OKR_ID": i, "Criterio_Nombre": "Nuevas Cuentas", "Tipo": "Acumulado", "Meta": 50, "UM": "U", "< Mejor": "NO", "Peso_%": 100.0}
+            for q, m_list in trimestres.items():
+                for m in m_list:
+                    c_row[f"{m}_P"] = 10; c_row[f"{m}_R"] = 10 * mult_q[q]
+            crits.append(c_row)
+            tareas.append({"onetrack_id": "ONETest", "Iniciativa_ID": i, "Trimestre": "Q1", "Jerarquia": "1.", "Tarea": "Diseño de Estrategia", "Responsable": "Ana", "Inicio": date(2026, 1, 5), "Fin": date(2026, 1, 20), "Completado": True})
+            tareas.append({"onetrack_id": "ONETest", "Iniciativa_ID": i, "Trimestre": "Q1", "Jerarquia": "1.1", "Tarea": "Ejecución de Campaña", "Responsable": "Luis", "Inicio": date(2026, 1, 22), "Fin": date(2026, 2, 15), "Completado": False})
+    
+    pd.DataFrame(kpis).to_sql("kpis", con=conn.engine, if_exists="append", index=False)
+    pd.DataFrame(okrs).to_sql("okrs_general", con=conn.engine, if_exists="append", index=False)
+    pd.DataFrame(crits).to_sql("okr_criterios", con=conn.engine, if_exists="append", index=False)
+    pd.DataFrame(tareas).to_sql("iniciativas_tareas", con=conn.engine, if_exists="append", index=False)
+
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        # LOGOTIPO ONE TRACK EN EL LOGIN
-        st.markdown(f"<div style='text-align:center; margin-bottom:20px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 80px; object-fit: contain;'></div>", unsafe_allow_html=True)
-        st.markdown("<div style='background-color:#ffffff; padding:40px; border-radius:12px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
+        # LOGO GIGANTE EN LOGIN (Sin caja blanca)
+        st.markdown(f"<div style='text-align:center; margin-bottom:40px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 240px; object-fit: contain;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='padding:20px; max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
         user = st.text_input("**Usuario**")
         pwd = st.text_input("**Contraseña**", type="password")
         st.write("")
@@ -89,6 +118,7 @@ if 'user_info' not in st.session_state or st.session_state.user_info is None:
             df_u = conn.query("SELECT * FROM usuarios", ttl=0)
             match = df_u[(df_u['username'] == user) & (df_u['password'] == pwd)]
             if not match.empty:
+                if user == "ONETest": generar_dummy_onetest()
                 st.session_state.user_info = match.iloc[0].to_dict()
                 st.session_state.datos_cargados = False
                 st.rerun()
@@ -99,7 +129,7 @@ if 'user_info' not in st.session_state or st.session_state.user_info is None:
 
 # --- PANEL DE ADMINISTRACION ---
 if st.session_state.user_info['role'] == 'admin':
-    st.markdown("<h2 style='color:#002060; font-weight:800;'>Panel de Administración</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#002060; font-weight:900;'>Panel de Administración</h2>", unsafe_allow_html=True)
     if st.button("Cerrar Sesión"):
         st.session_state.user_info = None
         st.rerun()
@@ -131,7 +161,7 @@ def ob_color(val, sob, meta, med):
     else: return "#ff0000" 
 
 def render_footer(df, meses):
-    html_footer = "<div style='display:flex; justify-content:flex-start; gap:12px; margin-bottom: 20px; align-items:center;'><div style='font-weight:800; color:#002060; font-size:14px; text-transform:uppercase;'>Avance Mensual:</div>"
+    html_footer = "<div style='display:flex; justify-content:flex-start; gap:12px; margin-bottom: 20px; align-items:center;'><div style='font-weight:900; color:#002060; font-size:15px; text-transform:uppercase;'>Avance Mensual:</div>"
     v_sob, v_meta, v_med = st.session_state.get("_v_sob", 100.0), st.session_state.get("_v_meta", 90.0), st.session_state.get("_v_med", 89.0)
     for m in meses:
         total_peso, acumulado = 0.0, 0.0
@@ -285,8 +315,7 @@ def guardar_en_bd():
                             row[f"{m}_P"] = matches[f"{m} Prog"].iloc[0]
                             row[f"{m}_R"] = matches[f"{m} Real"].iloc[0]
                     else:
-                        for m in meses:
-                            row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
+                        for m in meses: row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
             kpis_data.append(row)
 
     for i in range(1, 6):
@@ -330,7 +359,7 @@ def guardar_en_bd():
 if 'vista_actual' not in st.session_state: st.session_state.vista_actual = "Q1"
 
 with st.sidebar:
-    st.markdown("<h2 style='color:#002060; font-weight:800;'>Navegación</h2>", unsafe_allow_html=True)
+    st.markdown("<h2 style='color:#002060; font-weight:900;'>NAVEGACIÓN</h2>", unsafe_allow_html=True)
     vistas = ["Q1", "Q2", "Q3", "Q4", "Resumen Anual", "Configuración de Cuenta"]
     for v in vistas:
         b_type = "primary" if st.session_state.vista_actual == v else "secondary"
@@ -348,21 +377,24 @@ c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: 
     st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img2: 
-    # LOGO ONE TRACK CENTRAL
-    st.markdown(f"<div class='title-placeholder'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='title-placeholder'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 160px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img3: 
     logo_c = st.session_state.get("logo_input", "")
     if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
     st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 
+st.write("")
 c_inf1, c_inf2, c_inf3 = st.columns(3)
-st.session_state.empresa_input = c_inf1.text_input("**Empresa**", value=st.session_state.get("empresa_input", ""))
-st.session_state.dueno_input = c_inf2.text_input("**Nombre (Dueño del ONE TRACK)**", value=st.session_state.get("dueno_input", ""))
-st.session_state.puesto_input = c_inf3.text_input("**Puesto**", value=st.session_state.get("puesto_input", ""))
+st.markdown("<div class='custom-label'>EMPRESA</div>", unsafe_allow_html=True)
+st.session_state.empresa_input = c_inf1.text_input("Empresa", value=st.session_state.get("empresa_input", ""), label_visibility="collapsed")
+st.markdown("<div class='custom-label'>NOMBRE (DUEÑO DEL ONE TRACK)</div>", unsafe_allow_html=True)
+st.session_state.dueno_input = c_inf2.text_input("Dueño", value=st.session_state.get("dueno_input", ""), label_visibility="collapsed")
+st.markdown("<div class='custom-label'>PUESTO</div>", unsafe_allow_html=True)
+st.session_state.puesto_input = c_inf3.text_input("Puesto", value=st.session_state.get("puesto_input", ""), label_visibility="collapsed")
 st.divider()
 
 col_t, col_btn = st.columns([4, 1])
-with col_t: st.markdown("<h2 style='color:#002060; font-weight:800; margin:0;'>Tablero de Control</h2>", unsafe_allow_html=True)
+with col_t: st.markdown("<h2 style='color:#002060; font-weight:900; margin:0;'>Tablero de Control</h2>", unsafe_allow_html=True)
 with col_btn:
     if st.button("Guardar Cambios", type="primary", use_container_width=True):
         with st.spinner("Sincronizando de forma rápida..."):
@@ -376,8 +408,10 @@ col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
 with col_w:
     st.markdown("<div class='summary-card' style='padding:15px;'><p class='summary-title'>Ponderación Global</p>", unsafe_allow_html=True)
     c_kpi, c_okr = st.columns(2)
-    st.session_state._p_kpis = c_kpi.number_input("**Indicadores (%)**", value=st.session_state.get("_p_kpis", 50.0), key="p_kpis_ui")
-    st.session_state._p_okrs = c_okr.number_input("**Iniciativas (%)**", value=st.session_state.get("_p_okrs", 50.0), key="p_okrs_ui")
+    st.markdown("<div class='custom-label'>INDICADORES (%)</div>", unsafe_allow_html=True)
+    st.session_state._p_kpis = c_kpi.number_input("Ind", value=st.session_state.get("_p_kpis", 50.0), key="p_kpis_ui", label_visibility="collapsed")
+    st.markdown("<div class='custom-label'>INICIATIVAS (%)</div>", unsafe_allow_html=True)
+    st.session_state._p_okrs = c_okr.number_input("Ini", value=st.session_state.get("_p_okrs", 50.0), key="p_okrs_ui", label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
 with col_s1: ph_kpi = st.empty()
 with col_s2: ph_okr = st.empty()
@@ -408,20 +442,27 @@ if st.session_state.vista_actual in trimestres.keys():
     st.markdown(f"<div class='section-title'>Iniciativas Estratégicas - {q_name}</div>", unsafe_allow_html=True)
     for i in range(1, 6):
         st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
-        st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
+        
+        # Header de Iniciativa y Avance Integrado alineados
+        h_col1, h_col2 = st.columns([1, 3])
+        with h_col1: st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
+        with h_col2: ph_avance_ini = st.empty()
         
         ch1, ch2, ch3 = st.columns([3, 1, 1])
-        ch1.text_input("**Nombre de la Iniciativa**", value=st.session_state[f"okr_{q_name}_{i}_nom"], key=f"okr_{q_name}_{i}_nom", placeholder="Escribe el nombre aquí...")
-        st.markdown("<style>div[data-testid='stNumberInput'] > label { margin-bottom: 0px; }</style>", unsafe_allow_html=True)
-        ch2.number_input("**Ponderación (%)**", value=st.session_state[f"okr_{q_name}_{i}_peso"], key=f"okr_{q_name}_{i}_peso")
+        st.markdown("<div class='custom-label'>NOMBRE DE LA INICIATIVA</div>", unsafe_allow_html=True)
+        ch1.text_input("Nombre", value=st.session_state[f"okr_{q_name}_{i}_nom"], key=f"okr_{q_name}_{i}_nom", label_visibility="collapsed")
+        
+        st.markdown("<div class='custom-label'>PONDERACIÓN (%)</div>", unsafe_allow_html=True)
+        ch2.number_input("Peso", value=st.session_state[f"okr_{q_name}_{i}_peso"], key=f"okr_{q_name}_{i}_peso", label_visibility="collapsed")
         
         opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
         salud_act = st.session_state.get(f"okr_{q_name}_{i}_salud", "🟢 En Tiempo")
         if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
-        st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("**Estatus Actual**", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui")
+        st.markdown("<div class='custom-label'>ESTATUS ACTUAL</div>", unsafe_allow_html=True)
+        st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("Salud", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui", label_visibility="collapsed")
         
-        # Etiqueta modificada a "Objetivo"
-        st.text_area("**Objetivo:**", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80)
+        st.markdown("<div class='custom-label'>OBJETIVO</div>", unsafe_allow_html=True)
+        st.text_area("Obj", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80, label_visibility="collapsed")
         
         st.markdown("<div class='sub-section-title'>Criterios de Éxito (Medición)</div>", unsafe_allow_html=True)
         st.session_state[f"df_crit_{q_name}_{i}"] = st.data_editor(
@@ -431,6 +472,7 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_crit_{q_name}_{i}"
         )
         
+        # Calculo y Render de Avance Integrado de Iniciativa
         df_c_prog = st.session_state[f"df_crit_{q_name}_{i}"]
         acum_ini, tot_peso_ini = 0.0, 0.0
         for c_idx in range(len(df_c_prog)):
@@ -442,12 +484,12 @@ if st.session_state.vista_actual in trimestres.keys():
                 acum_ini += cump_c * (peso_c / 100.0)
                 tot_peso_ini += peso_c
         avance_ini = (acum_ini / (tot_peso_ini / 100.0)) if tot_peso_ini > 0 else 0.0
-        
         col_ini = ob_color(avance_ini, st.session_state.get("_v_sob", 100.0), st.session_state.get("_v_meta", 90.0), st.session_state.get("_v_med", 80.0))
         txt_col = "black" if col_ini in ["#ffff00", "#92d050"] else "white"
-        st.markdown(f"<div style='background-color:{col_ini}; color:{txt_col}; padding: 8px; border-radius: 6px; font-weight: 800; text-align: center; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>Avance Integrado de la Iniciativa ({q_name}): {avance_ini:.1f}%</div>", unsafe_allow_html=True)
         
-        st.markdown("<div class='sub-section-title'>Plan de Tareas y Seguimiento (Gantt)</div>", unsafe_allow_html=True)
+        ph_avance_ini.markdown(f"<div style='background-color:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius: 6px; font-weight: 900; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top:2px;'>AVANCE INTEGRADO: {avance_ini:.1f}%</div>", unsafe_allow_html=True)
+        
+        st.markdown("<div class='sub-section-title'>Plan de Tareas y Seguimiento</div>", unsafe_allow_html=True)
         st.session_state[f"df_tareas_{q_name}_{i}"] = st.data_editor(
             st.session_state[f"df_tareas_{q_name}_{i}"],
             use_container_width=True, hide_index=True, num_rows="dynamic",
@@ -460,7 +502,7 @@ if st.session_state.vista_actual in trimestres.keys():
         tot_t = len(t_validas)
         comp = t_validas["Completado"].sum() if tot_t > 0 else 0
         pct = int((comp / tot_t) * 100) if tot_t > 0 else 0
-        st.markdown(f"<div style='font-size:14px; font-weight:800; color:#002060; margin-bottom:8px;'>Avance de Tareas Operativas: {comp}/{tot_t} ({pct}%)</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:14px; font-weight:900; color:#002060; margin-bottom:8px;'>Avance de Tareas Operativas: {comp}/{tot_t} ({pct}%)</div>", unsafe_allow_html=True)
         st.progress(pct / 100.0)
         st.write("")
         dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
