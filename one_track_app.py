@@ -63,11 +63,24 @@ DEFAULT_LOGO_ONE_TRACK = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/ob
 # --- CONEXION A BD Y AUTENTICACION ---
 conn = st.connection("supabase", type="sql")
 
+def init_db():
+    try:
+        df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
+        if 'nombre' not in df.columns: raise Exception("Faltan columnas")
+    except Exception:
+        df_admin = pd.DataFrame([
+            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""}
+        ])
+        df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
+
+init_db()
+
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        st.markdown(f"<div style='text-align:center; margin-bottom:20px;'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 100px;'></div>", unsafe_allow_html=True)
+        # LOGOTIPO ONE TRACK EN EL LOGIN
+        st.markdown(f"<div style='text-align:center; margin-bottom:20px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 80px; object-fit: contain;'></div>", unsafe_allow_html=True)
         st.markdown("<div style='background-color:#ffffff; padding:40px; border-radius:12px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
         user = st.text_input("**Usuario**")
         pwd = st.text_input("**Contraseña**", type="password")
@@ -335,6 +348,7 @@ c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: 
     st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img2: 
+    # LOGO ONE TRACK CENTRAL
     st.markdown(f"<div class='title-placeholder'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img3: 
     logo_c = st.session_state.get("logo_input", "")
@@ -406,6 +420,7 @@ if st.session_state.vista_actual in trimestres.keys():
         if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
         st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("**Estatus Actual**", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui")
         
+        # Etiqueta modificada a "Objetivo"
         st.text_area("**Objetivo:**", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80)
         
         st.markdown("<div class='sub-section-title'>Criterios de Éxito (Medición)</div>", unsafe_allow_html=True)
@@ -416,7 +431,6 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_crit_{q_name}_{i}"
         )
         
-        # --- MATEMATICA: CALCULO DE AVANCE DE INICIATIVA ---
         df_c_prog = st.session_state[f"df_crit_{q_name}_{i}"]
         acum_ini, tot_peso_ini = 0.0, 0.0
         for c_idx in range(len(df_c_prog)):
