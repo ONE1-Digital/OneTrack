@@ -75,14 +75,14 @@ def init_db():
 
 init_db()
 
-# --- FUNCION DUMMY MEJORADA ---
+# --- FUNCION DUMMY MEJORADA MATEMATICAMENTE ---
 def generar_dummy_onetest():
     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
     cols_c = ["Criterio", "Tipo", "Meta", "UM", "< Mejor", "%"]
     cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]
 
     for q_name, meses in trimestres.items():
-        # KPIs Dummy
+        # KPIs Dummy (Globales)
         df_k = pd.DataFrame(columns=["KPIs Indicadores", "Tipo", "Meta", "UM", "< Mejor", "Peso %"] + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
         df_k.loc[1] = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0] + [166666.0, 166666.0 * mult_q[q_name]] * 3
         df_k.loc[2] = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0] + [95.0, 95.0 * mult_q[q_name]] * 3
@@ -90,66 +90,88 @@ def generar_dummy_onetest():
 
     # --- Q1 (1 Iniciativa) ---
     q_n = "Q1"; meses = trimestres[q_n]; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    st.session_state[f"ui_nom_{q_n}_1"], st.session_state[f"ui_peso_{q_n}_1"] = "Expansión de Mercado Norte", 100.0
-    st.session_state[f"ui_salud_{q_n}_1"], st.session_state[f"ui_obj_{q_n}_1"] = "🟢 En Tiempo", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales."
+    st.session_state[f"ui_nom_{q_n}_1"] = "Expansión de Mercado Norte"
+    st.session_state[f"ui_peso_{q_n}_1"] = 100.0
+    st.session_state[f"ui_salud_{q_n}_1"] = "🟢 En Tiempo"
+    st.session_state[f"ui_obj_{q_n}_1"] = "Conquistar 3 nuevos estados mediante campañas digitales."
+    
     df_c = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
     df_c.loc[1] = ["Nuevas Cuentas (B2B)", "Acumulado", 50.0, "U", "NO", 100.0, 15.0, 12.0, 15.0, 18.0, 20.0, 20.0]
     st.session_state[f"df_crit_{q_n}_1"] = df_c
+    
     df_t = pd.DataFrame(columns=cols_t)
-    df_t.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True]
-    df_t.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True]
-    df_t.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False]
+    df_t.loc[1] = ["1.", "Investigación de Mercado", "Ana", date(2026, 1, 5), date(2026, 1, 15), True]
+    df_t.loc[2] = ["1.1", "Contratación de Equipo", "Luis", date(2026, 1, 16), date(2026, 2, 10), True]
+    df_t.loc[3] = ["1.2", "Lanzamiento de Campaña", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False]
     st.session_state[f"df_tareas_{q_n}_1"] = df_t
 
     # --- Q2 (2 Iniciativas) ---
     q_n = "Q2"; meses = trimestres[q_n]; st.session_state[f"num_iniciativas_{q_n}"] = 2
-    st.session_state[f"ui_nom_{q_n}_1"], st.session_state[f"ui_peso_{q_n}_1"] = "Lanzamiento de Nuevo Producto", 60.0
-    st.session_state[f"ui_salud_{q_n}_1"], st.session_state[f"ui_obj_{q_n}_1"] = "🟡 En Riesgo", "Lanzar producto Alpha antes del cierre de semestre."
-    df_c = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
-    df_c.loc[1] = ["Prototipos validados", "Acumulado", 5.0, "U", "NO", 50.0, 2.0, 2.0, 2.0, 2.0, 1.0, 0.0]
-    df_c.loc[2] = ["Preventas cerradas", "Acumulado", 100.0, "U", "NO", 50.0, 20.0, 20.0, 40.0, 40.0, 40.0, 30.0]
-    st.session_state[f"df_crit_{q_n}_1"] = df_c
-    df_t = pd.DataFrame(columns=cols_t)
-    df_t.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True]
-    df_t.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True]
-    df_t.loc[3] = ["3.", "Campaña", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False]
-    st.session_state[f"df_tareas_{q_n}_1"] = df_t
+    # Iniciativa 1 (Q2)
+    st.session_state[f"ui_nom_{q_n}_1"] = "Lanzamiento de Nuevo Producto"
+    st.session_state[f"ui_peso_{q_n}_1"] = 60.0
+    st.session_state[f"ui_salud_{q_n}_1"] = "🟡 En Riesgo"
+    st.session_state[f"ui_obj_{q_n}_1"] = "Lanzar producto Alpha antes del cierre de semestre."
+    
+    df_c1_q2 = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
+    df_c1_q2.loc[1] = ["Prototipos validados", "Acumulado", 5.0, "U", "NO", 50.0, 2.0, 2.0, 2.0, 2.0, 1.0, 0.0]
+    df_c1_q2.loc[2] = ["Preventas cerradas", "Acumulado", 100.0, "U", "NO", 50.0, 20.0, 20.0, 40.0, 40.0, 40.0, 30.0]
+    st.session_state[f"df_crit_{q_n}_1"] = df_c1_q2
+    
+    df_t1_q2 = pd.DataFrame(columns=cols_t)
+    df_t1_q2.loc[1] = ["1.", "Diseño de Prototipo", "Ana", date(2026, 4, 1), date(2026, 4, 20), True]
+    df_t1_q2.loc[2] = ["2.", "Pruebas de Calidad", "Luis", date(2026, 5, 1), date(2026, 5, 15), True]
+    df_t1_q2.loc[3] = ["3.", "Campaña de Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False]
+    st.session_state[f"df_tareas_{q_n}_1"] = df_t1_q2
 
-    st.session_state[f"ui_nom_{q_n}_2"], st.session_state[f"ui_peso_{q_n}_2"] = "Optimización de Costos Operativos", 40.0
-    st.session_state[f"ui_salud_{q_n}_2"], st.session_state[f"ui_obj_{q_n}_2"] = "🟢 En Tiempo", "Reducir costos operativos en logística."
-    df_c2 = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
-    df_c2.loc[1] = ["Ahorro en logística", "Promedio", 15.0, "%", "NO", 100.0, 5.0, 5.0, 10.0, 12.0, 15.0, 15.0]
-    st.session_state[f"df_crit_{q_n}_2"] = df_c2
-    df_t2 = pd.DataFrame(columns=cols_t)
-    df_t2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True]
-    df_t2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False]
-    df_t2.loc[3] = ["3.", "Rutas eficientes", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False]
-    st.session_state[f"df_tareas_{q_n}_2"] = df_t2
+    # Iniciativa 2 (Q2)
+    st.session_state[f"ui_nom_{q_n}_2"] = "Optimización de Costos Operativos"
+    st.session_state[f"ui_peso_{q_n}_2"] = 40.0
+    st.session_state[f"ui_salud_{q_n}_2"] = "🟢 En Tiempo"
+    st.session_state[f"ui_obj_{q_n}_2"] = "Reducir costos operativos en logística."
+    
+    df_c2_q2 = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
+    df_c2_q2.loc[1] = ["Ahorro en logística", "Promedio", 15.0, "%", "NO", 100.0, 5.0, 5.0, 10.0, 12.0, 15.0, 15.0]
+    st.session_state[f"df_crit_{q_n}_2"] = df_c2_q2
+    
+    df_t2_q2 = pd.DataFrame(columns=cols_t)
+    df_t2_q2.loc[1] = ["1.", "Auditoría Interna", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True]
+    df_t2_q2.loc[2] = ["2.", "Renegociación de Contratos", "Luis", date(2026, 5, 5), date(2026, 5, 20), False]
+    df_t2_q2.loc[3] = ["3.", "Implementación Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False]
+    st.session_state[f"df_tareas_{q_n}_2"] = df_t2_q2
 
     # --- Q3 (1 Iniciativa) ---
     q_n = "Q3"; meses = trimestres[q_n]; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    st.session_state[f"ui_nom_{q_n}_1"], st.session_state[f"ui_peso_{q_n}_1"] = "Certificación ISO 9001", 100.0
-    st.session_state[f"ui_salud_{q_n}_1"], st.session_state[f"ui_obj_{q_n}_1"] = "🟢 En Tiempo", "Obtener certificación en procesos clave."
+    st.session_state[f"ui_nom_{q_n}_1"] = "Certificación ISO 9001"
+    st.session_state[f"ui_peso_{q_n}_1"] = 100.0
+    st.session_state[f"ui_salud_{q_n}_1"] = "🟢 En Tiempo"
+    st.session_state[f"ui_obj_{q_n}_1"] = "Obtener certificación en procesos clave."
+    
     df_c = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
     df_c.loc[1] = ["Fases completadas", "Acumulado", 3.0, "U", "NO", 100.0, 1.0, 1.0, 1.0, 1.0, 1.0, 0.0]
     st.session_state[f"df_crit_{q_n}_1"] = df_c
+    
     df_t = pd.DataFrame(columns=cols_t)
-    df_t.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True]
-    df_t.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False]
-    df_t.loc[3] = ["3.", "Auditoría final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False]
+    df_t.loc[1] = ["1.", "Diagnóstico Inicial", "Juan", date(2026, 7, 1), date(2026, 7, 15), True]
+    df_t.loc[2] = ["2.", "Capacitación de Personal", "Ana", date(2026, 8, 1), date(2026, 8, 20), False]
+    df_t.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False]
     st.session_state[f"df_tareas_{q_n}_1"] = df_t
 
     # --- Q4 (1 Iniciativa) ---
     q_n = "Q4"; meses = trimestres[q_n]; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    st.session_state[f"ui_nom_{q_n}_1"], st.session_state[f"ui_peso_{q_n}_1"] = "Cierre de Año y Planificación 2027", 100.0
-    st.session_state[f"ui_salud_{q_n}_1"], st.session_state[f"ui_obj_{q_n}_1"] = "🟢 En Tiempo", "Cerrar métricas anuales y planear presupuesto 2027."
+    st.session_state[f"ui_nom_{q_n}_1"] = "Cierre de Año y Planificación 2027"
+    st.session_state[f"ui_peso_{q_n}_1"] = 100.0
+    st.session_state[f"ui_salud_{q_n}_1"] = "🟢 En Tiempo"
+    st.session_state[f"ui_obj_{q_n}_1"] = "Cerrar métricas anuales y planear presupuesto 2027."
+    
     df_c = pd.DataFrame(columns=cols_c + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
     df_c.loc[1] = ["Presupuestos aprob.", "Acumulado", 4.0, "U", "NO", 100.0, 1.0, 1.0, 2.0, 2.0, 1.0, 1.0]
     st.session_state[f"df_crit_{q_n}_1"] = df_c
+    
     df_t = pd.DataFrame(columns=cols_t)
-    df_t.loc[1] = ["1.", "Revisión financiera", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True]
-    df_t.loc[2] = ["2.", "Metas corporativas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False]
-    df_t.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False]
+    df_t.loc[1] = ["1.", "Revisión Financiera", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True]
+    df_t.loc[2] = ["2.", "Definición Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False]
+    df_t.loc[3] = ["3.", "Presentación Ejecutiva", "Juan", date(2026, 12, 1), date(2026, 12, 15), False]
     st.session_state[f"df_tareas_{q_n}_1"] = df_t
 
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
@@ -629,7 +651,7 @@ elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.info("Presiona este botón para llenar tu tablero actual con datos de ejemplo matemáticamente perfectos. Luego ve a cualquier pestaña y presiona 'Guardar Cambios' para enviarlos a tu base de datos.")
     if st.button("Llenar tablero con datos Dummy", type="secondary"):
         generar_dummy_onetest()
-        st.success("¡Datos generados localmente! Ve a Q1 o Resumen Anual y presiona 'Guardar Cambios'.")
+        st.rerun()
         
     st.markdown("<br><div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
