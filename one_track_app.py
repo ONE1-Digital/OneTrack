@@ -10,29 +10,37 @@ st.set_page_config(page_title="ONE TRACK - Workspace", layout="wide", initial_si
 # --- CSS MINIMALISTA, ELEGANTE Y AZUL/BLANCO/GRIS ---
 st.markdown("""
     <style>
+    /* Fondos y contenedores */
     .stApp { background-color: #f4f6f9; }
+    
+    /* Barra Lateral de Navegación */
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
     [data-testid="stSidebar"] button[data-baseweb="button"] { border-radius: 8px; margin-bottom: 5px; border: 1px solid transparent; transition: all 0.2s;}
     [data-testid="stSidebar"] button[kind="secondary"] { background-color: #f8f9fa; color: #4b5563; border: 1px solid #e5e7eb;}
     [data-testid="stSidebar"] button[kind="secondary"]:hover { background-color: #e2e8f0; }
     [data-testid="stSidebar"] button[kind="primary"] { background-color: #002060 !important; color: #ffffff !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none;}
     [data-testid="stSidebar"] button p { font-size: 18px !important; font-weight: 900 !important; margin: 0; }
+
+    /* Titulos, Etiquetas y Secciones */
     .section-title { font-size: 26px; font-weight: 900; color: #002060; border-bottom: 3px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
     .sub-section-title { font-size: 15px; font-weight: 900; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .custom-label { font-size: 14px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; letter-spacing: 0.5px; }
+    .custom-label { font-size: 13px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 2px; margin-top: 10px; letter-spacing: 0.5px; }
+    
     .title-placeholder { display: flex; align-items: center; justify-content: center; height: 160px; background-color: transparent; border: none; box-shadow: none; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 160px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
+    
+    /* Tarjetas Blancas (Cards) */
     .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; }
     .summary-title { font-size: 14px; color: #4b5563; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;}
     .summary-value { font-size: 28px; color: #002060; font-weight: 900; }
     .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
     .iniciativa-header { font-size: 20px; font-weight: 900; color: #ffffff; background-color: #002060; padding: 10px 20px; border-radius: 8px; display: inline-block;}
+    
+    /* Ajustes Estéticos para las Tablas (Anti-plano) */
     div[data-testid="stDataFrame"] > div { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 12px rgba(0,0,0,0.08); background-color: #ffffff; padding: 4px; border: 1px solid #e2e8f0; }
     div[data-testid="stDataFrame"] table th { background-color: #002060 !important; color: #ffffff !important; font-size: 15px !important; font-weight: 900 !important; text-transform: uppercase; text-align: center !important;}
+    
     .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 900; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
-    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-top: 10px; margin-bottom: 10px;}
-    .sem-header { background-color: #002060; color: white; text-align: center; font-weight: 800; padding: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
-    .sem-label { padding: 8px 15px; font-weight: 800; text-align: right; border-bottom: 1px solid #f9fafb; font-size: 14px; color: black; display: flex; align-items: center; justify-content: flex-end;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -80,8 +88,9 @@ def generar_dummy_onetest():
         
         df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"])
         mes_num = list(trimestres.keys()).index(q_name) * 3 + 1
+        end_mes = mes_num + 1 if mes_num + 1 <= 12 else 12
         df_t.loc[0] = ["1.", "Diseño de Estrategia", "Ana", date(2026, mes_num, 5), date(2026, mes_num, 20), True]
-        df_t.loc[1] = ["1.1", "Ejecución de Campaña", "Luis", date(2026, mes_num, 22), date(2026, min(mes_num+1, 12), 15), False]
+        df_t.loc[1] = ["1.1", "Ejecución de Campaña", "Luis", date(2026, mes_num, 22), date(2026, end_mes, 15), False]
         st.session_state[f"df_tareas_{q_name}_1"] = df_t
 
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
@@ -270,7 +279,6 @@ def guardar_en_bd():
     emp, due, pue = st.session_state.get("empresa_input", ""), st.session_state.get("dueno_input", ""), st.session_state.get("puesto_input", "")
     logo_c = st.session_state.get("logo_input", "")
 
-    # Forzar columnas para tablas vacías
     cols_kpi = ["onetrack_id", "Empresa", "Puesto", "Dueno", "Logo_Cliente", "KPI_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%", "Peso_Global_KPI", "Peso_Global_OKR", "U_SVerde", "U_Verde", "U_Amarillo"]
     for q_n, meses in trimestres.items():
         for m in meses: cols_kpi.extend([f"{m}_P", f"{m}_R"])
@@ -307,7 +315,8 @@ def guardar_en_bd():
                                 row[f"{m}_P"] = matches[f"{m} Prog"].iloc[0]
                                 row[f"{m}_R"] = matches[f"{m} Real"].iloc[0]
                         else:
-                            for m in meses: row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
+                            for m in meses:
+                                row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
                 kpis_data.append(row)
 
     for i in range(1, 6):
@@ -382,17 +391,19 @@ with c_img3:
     st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 
 c_inf1, c_inf2, c_inf3 = st.columns(3)
-st.markdown("<div class='custom-label'>EMPRESA</div>", unsafe_allow_html=True)
-v_emp = st.session_state.get("empresa_input", "")
-st.session_state.empresa_input = c_inf1.text_input("Empresa", value=v_emp, key="ui_empresa", label_visibility="collapsed")
+with c_inf1:
+    st.markdown("<div class='custom-label'>EMPRESA</div>", unsafe_allow_html=True)
+    v_emp = st.session_state.get("empresa_input", "")
+    st.session_state.empresa_input = st.text_input("Empresa", value=v_emp, key="ui_empresa", label_visibility="collapsed")
+with c_inf2:
+    st.markdown("<div class='custom-label'>NOMBRE (DUEÑO DEL ONE TRACK)</div>", unsafe_allow_html=True)
+    v_due = st.session_state.get("dueno_input", "")
+    st.session_state.dueno_input = st.text_input("Dueño", value=v_due, key="ui_dueno", label_visibility="collapsed")
+with c_inf3:
+    st.markdown("<div class='custom-label'>PUESTO</div>", unsafe_allow_html=True)
+    v_pue = st.session_state.get("puesto_input", "")
+    st.session_state.puesto_input = st.text_input("Puesto", value=v_pue, key="ui_puesto", label_visibility="collapsed")
 
-st.markdown("<div class='custom-label'>NOMBRE (DUEÑO DEL ONE TRACK)</div>", unsafe_allow_html=True)
-v_due = st.session_state.get("dueno_input", "")
-st.session_state.dueno_input = c_inf2.text_input("Dueño", value=v_due, key="ui_dueno", label_visibility="collapsed")
-
-st.markdown("<div class='custom-label'>PUESTO</div>", unsafe_allow_html=True)
-v_pue = st.session_state.get("puesto_input", "")
-st.session_state.puesto_input = c_inf3.text_input("Puesto", value=v_pue, key="ui_puesto", label_visibility="collapsed")
 st.divider()
 
 col_t, col_btn = st.columns([4, 1])
@@ -410,13 +421,14 @@ col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
 with col_w:
     st.markdown("<div class='summary-card' style='padding:15px;'><p class='summary-title'>Ponderación Global</p>", unsafe_allow_html=True)
     c_kpi, c_okr = st.columns(2)
-    st.markdown("<div class='custom-label'>INDICADORES (%)</div>", unsafe_allow_html=True)
-    v_pk = float(st.session_state.get("_p_kpis", 50.0))
-    st.session_state._p_kpis = c_kpi.number_input("Ind", value=v_pk, key="ui_p_kpis", label_visibility="collapsed")
-    
-    st.markdown("<div class='custom-label'>INICIATIVAS (%)</div>", unsafe_allow_html=True)
-    v_po = float(st.session_state.get("_p_okrs", 50.0))
-    st.session_state._p_okrs = c_okr.number_input("Ini", value=v_po, key="ui_p_okrs", label_visibility="collapsed")
+    with c_kpi:
+        st.markdown("<div class='custom-label'>INDICADORES (%)</div>", unsafe_allow_html=True)
+        v_pk = float(st.session_state.get("_p_kpis", 50.0))
+        st.session_state._p_kpis = st.number_input("Ind", value=v_pk, key="ui_p_kpis", label_visibility="collapsed")
+    with c_okr:
+        st.markdown("<div class='custom-label'>INICIATIVAS (%)</div>", unsafe_allow_html=True)
+        v_po = float(st.session_state.get("_p_okrs", 50.0))
+        st.session_state._p_okrs = st.number_input("Ini", value=v_po, key="ui_p_okrs", label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
 with col_s1: ph_kpi = st.empty()
 with col_s2: ph_okr = st.empty()
@@ -427,9 +439,6 @@ st.write("")
 if st.session_state.vista_actual in trimestres.keys():
     q_name = st.session_state.vista_actual
     meses_q = trimestres[q_name]
-    
-    # REINICIALIZA ESTRUCTURAS SI FALTAN (Protección Anti-Crash)
-    for i in range(1, 6): init_okr_structure(q_name, i, meses_q)
     
     st.markdown(f"<div class='section-title'>KPIs Indicadores - {q_name}</div>", unsafe_allow_html=True)
     render_footer(st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame()), meses_q)
@@ -456,22 +465,25 @@ if st.session_state.vista_actual in trimestres.keys():
         with h_col2: ph_avance_ini = st.empty()
         
         ch1, ch2, ch3 = st.columns([3, 1, 1])
-        st.markdown("<div class='custom-label'>NOMBRE DE LA INICIATIVA</div>", unsafe_allow_html=True)
-        v_nom = st.session_state.get(f"okr_{q_name}_{i}_nom", "")
-        n_nom = ch1.text_input("Nombre", value=v_nom, key=f"ui_nom_{q_name}_{i}", label_visibility="collapsed")
-        st.session_state[f"okr_{q_name}_{i}_nom"] = n_nom
+        with ch1:
+            st.markdown("<div class='custom-label'>NOMBRE DE LA INICIATIVA</div>", unsafe_allow_html=True)
+            v_nom = st.session_state.get(f"okr_{q_name}_{i}_nom", "")
+            n_nom = st.text_input("Nombre", value=v_nom, key=f"ui_nom_{q_name}_{i}", label_visibility="collapsed")
+            st.session_state[f"okr_{q_name}_{i}_nom"] = n_nom
         
-        st.markdown("<div class='custom-label'>PONDERACIÓN (%)</div>", unsafe_allow_html=True)
-        v_peso = float(st.session_state.get(f"okr_{q_name}_{i}_peso", 20.0))
-        n_peso = ch2.number_input("Peso", value=v_peso, key=f"ui_peso_{q_name}_{i}", label_visibility="collapsed")
-        st.session_state[f"okr_{q_name}_{i}_peso"] = n_peso
+        with ch2:
+            st.markdown("<div class='custom-label'>PONDERACIÓN (%)</div>", unsafe_allow_html=True)
+            v_peso = float(st.session_state.get(f"okr_{q_name}_{i}_peso", 20.0))
+            n_peso = st.number_input("Peso", value=v_peso, key=f"ui_peso_{q_name}_{i}", label_visibility="collapsed")
+            st.session_state[f"okr_{q_name}_{i}_peso"] = n_peso
         
-        opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
-        salud_act = st.session_state.get(f"okr_{q_name}_{i}_salud", "🟢 En Tiempo")
-        if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
-        st.markdown("<div class='custom-label'>ESTATUS ACTUAL</div>", unsafe_allow_html=True)
-        n_salud = ch3.selectbox("Salud", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"ui_salud_{q_name}_{i}", label_visibility="collapsed")
-        st.session_state[f"okr_{q_name}_{i}_salud"] = n_salud
+        with ch3:
+            opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
+            salud_act = st.session_state.get(f"okr_{q_name}_{i}_salud", "🟢 En Tiempo")
+            if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
+            st.markdown("<div class='custom-label'>ESTATUS ACTUAL</div>", unsafe_allow_html=True)
+            n_salud = st.selectbox("Salud", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"ui_salud_{q_name}_{i}", label_visibility="collapsed")
+            st.session_state[f"okr_{q_name}_{i}_salud"] = n_salud
         
         st.markdown("<div class='custom-label'>OBJETIVO</div>", unsafe_allow_html=True)
         v_obj = st.session_state.get(f"okr_{q_name}_{i}_obj", "")
@@ -598,22 +610,15 @@ if st.session_state.vista_actual == "Resumen Anual":
         col_sem, col_space = st.columns([2, 3])
         with col_sem:
             st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Éxito</div>""", unsafe_allow_html=True)
-            
             c1, c2 = st.columns([2, 1])
             c1.markdown("<div class='sem-label' style='background-color:#00b050; color:white;'>Sobresaliente</div>", unsafe_allow_html=True)
-            v_sob_c = float(st.session_state.get("_v_sob", 100.0))
-            st.session_state._v_sob = c2.number_input("sob", value=v_sob_c, label_visibility="collapsed", key="cfg_sob")
-            
+            st.session_state._v_sob = c2.number_input("sob", value=float(st.session_state.get("_v_sob", 100.0)), label_visibility="collapsed", key="cfg_sob")
             c3, c4 = st.columns([2, 1])
             c3.markdown("<div class='sem-label' style='background-color:#92d050; color:white;'>Meta</div>", unsafe_allow_html=True)
-            v_meta_c = float(st.session_state.get("_v_meta", 90.0))
-            st.session_state._v_meta = c4.number_input("meta", value=v_meta_c, label_visibility="collapsed", key="cfg_meta")
-            
+            st.session_state._v_meta = c4.number_input("meta", value=float(st.session_state.get("_v_meta", 90.0)), label_visibility="collapsed", key="cfg_meta")
             c5, c6 = st.columns([2, 1])
             c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio</div>", unsafe_allow_html=True)
-            v_med_c = float(st.session_state.get("_v_med", 80.0))
-            st.session_state._v_med = c6.number_input("med", value=v_med_c, label_visibility="collapsed", key="cfg_med")
-            
+            st.session_state._v_med = c6.number_input("med", value=float(st.session_state.get("_v_med", 80.0)), label_visibility="collapsed", key="cfg_med")
             c7, c8 = st.columns([2, 1])
             c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo</div>", unsafe_allow_html=True)
             c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:800; font-size:16px;'>{st.session_state.get('_v_med', 80.0)}%</div>", unsafe_allow_html=True)
