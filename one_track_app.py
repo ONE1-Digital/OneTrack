@@ -29,7 +29,7 @@ st.markdown("""
     /* Titulos y Secciones */
     .section-title { font-size: 24px; font-weight: 800; color: #002060; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
     .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .title-placeholder { font-size: 32px; font-weight: 800; color: #002060; display: flex; align-items: center; justify-content: center; height: 80px; letter-spacing: 2px; }
+    .title-placeholder { display: flex; align-items: center; justify-content: center; height: 100px; background-color: transparent; border: none; box-shadow: none; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 100px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
     
     /* Tarjetas Blancas (Cards) */
@@ -53,30 +53,21 @@ st.markdown("""
     </style>
 """, unsafe_allow_html=True)
 
+# --- CONSTANTES ---
+trimestres = {"Q1": ["Ene", "Feb", "Mar"], "Q2": ["Abr", "May", "Jun"], "Q3": ["Jul", "Ago", "Sep"], "Q4": ["Oct", "Nov", "Dic"]}
+meses_totales = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+DEFAULT_LOGO_ONE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE.png"
+DEFAULT_LOGO_CLIENTE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
+DEFAULT_LOGO_ONE_TRACK = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE_TRACK_LOGO.png"
+
 # --- CONEXION A BD Y AUTENTICACION ---
 conn = st.connection("supabase", type="sql")
 
-def init_db():
-    try:
-        df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
-        if 'nombre' not in df.columns: raise Exception("Faltan columnas")
-        if not (df['username'] == 'ONETest').any():
-            df_test = pd.DataFrame([{"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}])
-            df_final = pd.concat([conn.query("SELECT * FROM usuarios", ttl=0), df_test], ignore_index=True)
-            df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
-    except Exception:
-        df_admin = pd.DataFrame([
-            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""},
-            {"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}
-        ])
-        df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
-
-init_db()
-
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
-    st.markdown("<br><br><h1 style='text-align: center; color: #002060; font-weight: 800;'>Acceso ONE TRACK</h1>", unsafe_allow_html=True)
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
+        st.markdown(f"<div style='text-align:center; margin-bottom:20px;'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 100px;'></div>", unsafe_allow_html=True)
         st.markdown("<div style='background-color:#ffffff; padding:40px; border-radius:12px; box-shadow: 0 10px 15px rgba(0,0,0,0.05); border: 1px solid #e5e7eb;'>", unsafe_allow_html=True)
         user = st.text_input("**Usuario**")
         pwd = st.text_input("**Contraseña**", type="password")
@@ -113,10 +104,6 @@ if st.session_state.user_info['role'] == 'admin':
 
 # --- CONSTANTES CLIENTE ---
 token = st.session_state.user_info['username']
-trimestres = {"Q1": ["Ene", "Feb", "Mar"], "Q2": ["Abr", "May", "Jun"], "Q3": ["Jul", "Ago", "Sep"], "Q4": ["Oct", "Nov", "Dic"]}
-meses_totales = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
-DEFAULT_LOGO_ONE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE.png"
-DEFAULT_LOGO_CLIENTE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
 
 # --- FUNCIONES MATEMATICAS Y COLORES ---
 def calc_cump(prog, real, menor_mejor="NO"):
@@ -164,7 +151,7 @@ def dibujar_gantt(df_tareas):
     ).properties(height=max(150, len(df_plot)*35))
     st.altair_chart(chart, use_container_width=True)
 
-# --- CARGA DE DATOS Y GENERACION DUMMY ---
+# --- CARGA DE DATOS ---
 def init_okr_structure(q_name, i, meses):
     if f"okr_{q_name}_{i}_nom" not in st.session_state:
         st.session_state[f"okr_{q_name}_{i}_nom"] = ""
@@ -211,15 +198,6 @@ def cargar_datos():
                 new_row = [str(row.get("KPI_Nombre", "")), str(row.get("Tipo", "Promedio")), float(row.get("Meta", 0.0)), str(row.get("UM", "U")), str(row.get("< Mejor", "NO")), float(row.get("Peso_%", 20.0))]
                 for m in meses: new_row.extend([float(row.get(f"{m}_P", 0.0)), float(row.get(f"{m}_R", 0.0))])
                 df_k.loc[len(df_k)] = new_row
-        elif es_nuevo and token == "ONETest": 
-            mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-            r1 = ["Ventas Mensuales", "Promedio", 500000.0, "$", "NO", 50.0]
-            for m in meses: r1.extend([100000.0, 100000.0 * mult_q[q_name]])
-            df_k.loc[0] = r1
-            
-            r2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
-            for m in meses: r2.extend([95.0, 95.0 * mult_q[q_name]])
-            df_k.loc[1] = r2
         else:
             df_k.loc[0] = ["", "Promedio", 0.0, "U", "NO", 0.0] + [0.0]*(len(meses)*2)
         
@@ -233,10 +211,6 @@ def cargar_datos():
                 st.session_state[f"okr_{q_name}_{i}_obj"] = str(row_o.get("Objetivo", ""))
                 st.session_state[f"okr_{q_name}_{i}_peso"] = float(row_o.get("Peso_%", 20.0))
                 st.session_state[f"okr_{q_name}_{i}_salud"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
-            elif es_nuevo and token == "ONETest" and i == 1:
-                st.session_state[f"okr_{q_name}_{i}_nom"] = "Expansión de Mercado Norte"
-                st.session_state[f"okr_{q_name}_{i}_obj"] = "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales."
-                st.session_state[f"okr_{q_name}_{i}_peso"] = 100.0
             
             if not df_crit.empty:
                 crit_okr = df_crit[df_crit['OKR_ID'] == i].reset_index(drop=True)
@@ -253,13 +227,6 @@ def cargar_datos():
                             df_c_temp.at[c_idx, f"{m} Prog"] = float(r_c.get(f"{m}_P", 0.0))
                             df_c_temp.at[c_idx, f"{m} Real"] = float(r_c.get(f"{m}_R", 0.0))
                     st.session_state[f"df_crit_{q_name}_{i}"] = df_c_temp
-            elif es_nuevo and token == "ONETest" and i == 1:
-                mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-                st.session_state[f"df_crit_{q_name}_{i}"].at[0, "Criterio"] = "Nuevas Cuentas (B2B)"
-                st.session_state[f"df_crit_{q_name}_{i}"].at[0, "Meta"] = 50.0
-                for m in meses:
-                    st.session_state[f"df_crit_{q_name}_{i}"].at[0, f"{m} Prog"] = 10.0
-                    st.session_state[f"df_crit_{q_name}_{i}"].at[0, f"{m} Real"] = 10.0 * mult_q[q_name]
 
             if not df_tareas.empty:
                 tar_okr = df_tareas[(df_tareas['Iniciativa_ID'] == i) & (df_tareas['Trimestre'] == q_name)]
@@ -269,12 +236,6 @@ def cargar_datos():
                     df_t["Inicio"] = pd.to_datetime(df_t["Inicio"]).dt.date
                     df_t["Fin"] = pd.to_datetime(df_t["Fin"]).dt.date
                     st.session_state[f"df_tareas_{q_name}_{i}"] = df_t
-            elif es_nuevo and token == "ONETest" and i == 1:
-                df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"])
-                mes_num = list(trimestres.keys()).index(q_name) * 3 + 1
-                df_t.loc[0] = ["1.", "Diseño de Estrategia", "Ana", date(2026, mes_num, 5), date(2026, mes_num, 20), True]
-                df_t.loc[1] = ["1.1", "Ejecución de Campaña", "Luis", date(2026, mes_num, 22), date(2026, mes_num+1, 15), False]
-                st.session_state[f"df_tareas_{q_name}_{i}"] = df_t
 
     st.session_state.datos_cargados = True
 
@@ -288,7 +249,6 @@ def guardar_en_bd():
     emp, due, pue = st.session_state.get("empresa_input", ""), st.session_state.get("dueno_input", ""), st.session_state.get("puesto_input", "")
     logo_c = st.session_state.get("logo_input", "")
 
-    # KPIs Dinámicos usando Q1 como Maestro
     df_kpi_master = st.session_state["df_kpi_Q1"]
     for idx, r in df_kpi_master.iterrows():
         k_nom = str(r.get("KPIs Indicadores", "")).strip()
@@ -375,7 +335,7 @@ c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: 
     st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img2: 
-    st.markdown("<div class='title-placeholder'>ONE TRACK</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='title-placeholder'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with c_img3: 
     logo_c = st.session_state.get("logo_input", "")
     if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
@@ -418,6 +378,7 @@ if st.session_state.vista_actual in trimestres.keys():
     st.markdown(f"<div class='section-title'>KPIs Indicadores - {q_name}</div>", unsafe_allow_html=True)
     render_footer(st.session_state[f"df_kpi_{q_name}"], meses_q)
     
+    st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
     st.session_state[f"df_kpi_{q_name}"] = st.data_editor(
         st.session_state[f"df_kpi_{q_name}"],
         use_container_width=True, hide_index=True, num_rows="dynamic",
@@ -428,6 +389,7 @@ if st.session_state.vista_actual in trimestres.keys():
         },
         key=f"ed_kpi_{q_name}"
     )
+    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"<div class='section-title'>Iniciativas Estratégicas - {q_name}</div>", unsafe_allow_html=True)
     for i in range(1, 6):
@@ -444,7 +406,7 @@ if st.session_state.vista_actual in trimestres.keys():
         if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
         st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("**Estatus Actual**", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui")
         
-        st.text_area("**Objetivo Principal:**", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80)
+        st.text_area("**Objetivo:**", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80)
         
         st.markdown("<div class='sub-section-title'>Criterios de Éxito (Medición)</div>", unsafe_allow_html=True)
         st.session_state[f"df_crit_{q_name}_{i}"] = st.data_editor(
