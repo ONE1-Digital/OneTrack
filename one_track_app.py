@@ -58,57 +58,18 @@ def init_db():
     try:
         df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
         if 'nombre' not in df.columns: raise Exception("Faltan columnas")
-        if not (df['username'] == 'ONETest').any():
-            df_test = pd.DataFrame([{"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}])
-            df_final = pd.concat([conn.query("SELECT * FROM usuarios", ttl=0), df_test], ignore_index=True)
-            df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
     except Exception:
         df_admin = pd.DataFrame([
-            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""},
-            {"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}
+            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""}
         ])
         df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
 
 init_db()
 
-# --- FUNCION DE DATOS DUMMY PARA ONETEST (EJECUCION UNICA) ---
-def generar_dummy_onetest():
-    k = conn.query("SELECT * FROM kpis WHERE onetrack_id = 'ONETest'", ttl=0)
-    if not k.empty: return # Si ya tiene datos, cancela la inyección
-    
-    kpis, okrs, crits, tareas = [], [], [], []
-    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-    
-    k1 = {"onetrack_id": "ONETest", "Empresa": "ONE TRACK Test", "Puesto": "Director General", "Dueno": "Usuario de Prueba", "Logo_Cliente": "", "KPI_Nombre": "Ventas Mensuales", "Tipo": "Promedio", "Meta": 500000, "UM": "$", "< Mejor": "NO", "Peso_%": 50.0, "Peso_Global_KPI": 50.0, "Peso_Global_OKR": 50.0, "U_SVerde": 100, "U_Verde": 90, "U_Amarillo": 80}
-    k2 = {"onetrack_id": "ONETest", "Empresa": "ONE TRACK Test", "Puesto": "Director General", "Dueno": "Usuario de Prueba", "Logo_Cliente": "", "KPI_Nombre": "Satisfacción de Clientes", "Tipo": "Promedio", "Meta": 95, "UM": "%", "< Mejor": "NO", "Peso_%": 50.0, "Peso_Global_KPI": 50.0, "Peso_Global_OKR": 50.0, "U_SVerde": 100, "U_Verde": 90, "U_Amarillo": 80}
-    
-    for q, m_list in trimestres.items():
-        for m in m_list:
-            k1[f"{m}_P"] = 100000; k1[f"{m}_R"] = 100000 * mult_q[q]
-            k2[f"{m}_P"] = 95; k2[f"{m}_R"] = 95 * mult_q[q]
-    kpis.extend([k1, k2])
-    
-    for i in range(1, 6):
-        if i == 1:
-            okrs.append({"onetrack_id": "ONETest", "OKR_ID": i, "OKR_Nombre": "Expansión de Mercado Norte", "Objetivo": "Conquistar 3 nuevos estados mediante campañas.", "Peso_%": 100.0, "Estatus_Salud": "🟢 En Tiempo"})
-            c_row = {"onetrack_id": "ONETest", "OKR_ID": i, "Criterio_Nombre": "Nuevas Cuentas", "Tipo": "Acumulado", "Meta": 50, "UM": "U", "< Mejor": "NO", "Peso_%": 100.0}
-            for q, m_list in trimestres.items():
-                for m in m_list:
-                    c_row[f"{m}_P"] = 10; c_row[f"{m}_R"] = 10 * mult_q[q]
-            crits.append(c_row)
-            tareas.append({"onetrack_id": "ONETest", "Iniciativa_ID": i, "Trimestre": "Q1", "Jerarquia": "1.", "Tarea": "Diseño de Estrategia", "Responsable": "Ana", "Inicio": date(2026, 1, 5), "Fin": date(2026, 1, 20), "Completado": True})
-            tareas.append({"onetrack_id": "ONETest", "Iniciativa_ID": i, "Trimestre": "Q1", "Jerarquia": "1.1", "Tarea": "Ejecución de Campaña", "Responsable": "Luis", "Inicio": date(2026, 1, 22), "Fin": date(2026, 2, 15), "Completado": False})
-    
-    pd.DataFrame(kpis).to_sql("kpis", con=conn.engine, if_exists="append", index=False)
-    pd.DataFrame(okrs).to_sql("okrs_general", con=conn.engine, if_exists="append", index=False)
-    pd.DataFrame(crits).to_sql("okr_criterios", con=conn.engine, if_exists="append", index=False)
-    pd.DataFrame(tareas).to_sql("iniciativas_tareas", con=conn.engine, if_exists="append", index=False)
-
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
     with col2:
-        # LOGO GIGANTE EN LOGIN (Sin caja blanca)
         st.markdown(f"<div style='text-align:center; margin-bottom:40px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 240px; object-fit: contain;'></div>", unsafe_allow_html=True)
         st.markdown("<div style='padding:20px; max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
         user = st.text_input("**Usuario**")
@@ -118,7 +79,6 @@ if 'user_info' not in st.session_state or st.session_state.user_info is None:
             df_u = conn.query("SELECT * FROM usuarios", ttl=0)
             match = df_u[(df_u['username'] == user) & (df_u['password'] == pwd)]
             if not match.empty:
-                if user == "ONETest": generar_dummy_onetest()
                 st.session_state.user_info = match.iloc[0].to_dict()
                 st.session_state.datos_cargados = False
                 st.rerun()
@@ -194,7 +154,7 @@ def dibujar_gantt(df_tareas):
     ).properties(height=max(150, len(df_plot)*35))
     st.altair_chart(chart, use_container_width=True)
 
-# --- CARGA DE DATOS ---
+# --- CARGA Y GENERACION DE DATOS ---
 def init_okr_structure(q_name, i, meses):
     if f"okr_{q_name}_{i}_nom" not in st.session_state:
         st.session_state[f"okr_{q_name}_{i}_nom"] = ""
@@ -281,6 +241,48 @@ def cargar_datos():
                     st.session_state[f"df_tareas_{q_name}_{i}"] = df_t
 
     st.session_state.datos_cargados = True
+
+def generar_datos_dummy_local():
+    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
+    for q_name, meses in trimestres.items():
+        df_k = st.session_state[f"df_kpi_{q_name}"]
+        for i in range(len(df_k)): df_k.loc[i] = ["", "Promedio", 0.0, "U", "NO", 0.0] + [0.0]*(len(meses)*2)
+        
+        r1 = ["Ventas Mensuales", "Promedio", 500000.0, "$", "NO", 50.0]
+        for m in meses: r1.extend([100000.0, 100000.0 * mult_q[q_name]])
+        df_k.loc[0] = r1
+        
+        r2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
+        for m in meses: r2.extend([95.0, 95.0 * mult_q[q_name]])
+        df_k.loc[1] = r2
+        st.session_state[f"df_kpi_{q_name}"] = df_k
+        
+        st.session_state[f"okr_{q_name}_1_nom"] = "Expansión de Mercado Norte"
+        st.session_state[f"okr_{q_name}_1_obj"] = "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales."
+        st.session_state[f"okr_{q_name}_1_peso"] = 100.0
+        st.session_state[f"okr_{q_name}_1_salud"] = "🟢 En Tiempo"
+        
+        df_c = st.session_state[f"df_crit_{q_name}_1"]
+        for i in range(len(df_c)): df_c.loc[i] = ["", "Promedio", 0.0, "U", "NO", 0.0] + [0.0]*(len(meses)*2)
+        df_c.at[0, "Criterio"] = "Nuevas Cuentas (B2B)"
+        df_c.at[0, "Meta"], df_c.at[0, "%"] = 50.0, 100.0
+        for m in meses:
+            df_c.at[0, f"{m} Prog"] = 10.0
+            df_c.at[0, f"{m} Real"] = 10.0 * mult_q[q_name]
+        st.session_state[f"df_crit_{q_name}_1"] = df_c
+        
+        df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"])
+        mes_num = list(trimestres.keys()).index(q_name) * 3 + 1
+        end_mes = mes_num + 1 if mes_num + 1 <= 12 else 12
+        df_t.loc[0] = ["1.", "Diseño de Estrategia", "Ana", date(2026, mes_num, 5), date(2026, mes_num, 20), True]
+        df_t.loc[1] = ["1.1", "Ejecución de Campaña", "Luis", date(2026, mes_num, 22), date(2026, end_mes, 15), False]
+        st.session_state[f"df_tareas_{q_name}_1"] = df_t
+        
+        for i in range(2, 6):
+            st.session_state[f"okr_{q_name}_{i}_nom"] = ""
+            st.session_state[f"okr_{q_name}_{i}_obj"] = ""
+            st.session_state[f"okr_{q_name}_{i}_peso"] = 20.0
+            st.session_state[f"okr_{q_name}_{i}_salud"] = "🟢 En Tiempo"
 
 cargar_datos()
 
@@ -383,7 +385,6 @@ with c_img3:
     if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
     st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 80px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 
-st.write("")
 c_inf1, c_inf2, c_inf3 = st.columns(3)
 st.markdown("<div class='custom-label'>EMPRESA</div>", unsafe_allow_html=True)
 st.session_state.empresa_input = c_inf1.text_input("Empresa", value=st.session_state.get("empresa_input", ""), label_visibility="collapsed")
@@ -443,7 +444,6 @@ if st.session_state.vista_actual in trimestres.keys():
     for i in range(1, 6):
         st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
         
-        # Header de Iniciativa y Avance Integrado alineados
         h_col1, h_col2 = st.columns([1, 3])
         with h_col1: st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
         with h_col2: ph_avance_ini = st.empty()
@@ -472,7 +472,6 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_crit_{q_name}_{i}"
         )
         
-        # Calculo y Render de Avance Integrado de Iniciativa
         df_c_prog = st.session_state[f"df_crit_{q_name}_{i}"]
         acum_ini, tot_peso_ini = 0.0, 0.0
         for c_idx in range(len(df_c_prog)):
@@ -511,7 +510,14 @@ if st.session_state.vista_actual in trimestres.keys():
 
 elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
+    
+    st.markdown("<div class='sub-section-title'>Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
+    st.info("Presiona este botón para llenar tu tablero con datos de ejemplo matemáticamente perfectos. Luego ve a cualquier pestaña y presiona 'Guardar Cambios' para enviarlos a tu base de datos.")
+    if st.button("Llenar tablero con datos Dummy", type="secondary"):
+        generar_datos_dummy_local()
+        st.success("¡Datos generados localmente! Ve a Q1 o Resumen Anual y presiona 'Guardar Cambios'.")
+        
+    st.markdown("<br><div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
     n_pwd = st.text_input("**Nueva Contraseña**", type="password", placeholder="Escribe aquí para cambiar tu contraseña")
     if st.button("Actualizar Contraseña", type="primary"):
