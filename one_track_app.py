@@ -7,7 +7,7 @@ from sqlalchemy import text
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="ONE TRACK - Workspace", layout="wide", initial_sidebar_state="expanded")
 
-# --- CSS MINIMALISTA, ELEGANTE Y AZUL/BLANCO/GRIS ---
+# --- CSS MINIMALISTA, ELEGANTE Y BLANCO ---
 st.markdown("""
     <style>
     /* Fondos y contenedores */
@@ -23,24 +23,34 @@ st.markdown("""
 
     /* Titulos, Etiquetas y Secciones */
     .section-title { font-size: 26px; font-weight: 900; color: #002060; border-bottom: 3px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
-    .sub-section-title { font-size: 15px; font-weight: 900; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .custom-label { font-size: 13px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 2px; margin-top: 10px; letter-spacing: 0.5px; }
+    .sub-section-title { font-size: 15px; font-weight: 900; color: #4b5563; margin-top: 25px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
+    .custom-label { font-size: 14px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; margin-top: 10px; letter-spacing: 0.5px; }
     
     .title-placeholder { display: flex; align-items: center; justify-content: center; height: 160px; background-color: transparent; border: none; box-shadow: none; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 160px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
     
-    /* Tarjetas Blancas (Cards) */
+    /* Forzar fondo blanco en campos de texto/inputs */
+    div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
+        background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important;
+    }
+
+    /* Tarjetas y Estructura Iniciativas */
     .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; }
     .summary-title { font-size: 14px; color: #4b5563; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;}
     .summary-value { font-size: 28px; color: #002060; font-weight: 900; }
-    .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
-    .iniciativa-header { font-size: 20px; font-weight: 900; color: #ffffff; background-color: #002060; padding: 10px 20px; border-radius: 8px; display: inline-block;}
     
-    /* Ajustes Estéticos para las Tablas (Anti-plano) */
-    div[data-testid="stDataFrame"] > div { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 12px rgba(0,0,0,0.08); background-color: #ffffff; padding: 4px; border: 1px solid #e2e8f0; }
-    div[data-testid="stDataFrame"] table th { background-color: #002060 !important; color: #ffffff !important; font-size: 15px !important; font-weight: 900 !important; text-transform: uppercase; text-align: center !important;}
+    .iniciativa-box { padding: 5px 0; margin-bottom: 10px; }
+    .iniciativa-header { font-size: 20px; font-weight: 900; color: #ffffff; background-color: #002060; padding: 10px 20px; border-radius: 8px; display: inline-block; margin-bottom: 10px;}
+    .iniciativa-divider { border-top: 3px dashed #cbd5e1; margin: 40px 0; }
     
+    /* Tablas Data Grid */
+    div[data-testid="stDataFrame"] > div { border: none; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.08); background-color: #ffffff; padding: 2px; border: 1px solid #e2e8f0; }
+    
+    /* Misc */
     .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 900; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-top: 10px; margin-bottom: 10px;}
+    .sem-header { background-color: #002060; color: white; text-align: center; font-weight: 800; padding: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
+    .sem-label { padding: 8px 15px; font-weight: 800; text-align: right; border-bottom: 1px solid #f9fafb; font-size: 14px; color: black; display: flex; align-items: center; justify-content: flex-end;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -178,7 +188,7 @@ def dibujar_gantt(df_tareas):
         x=alt.X('Inicio', title='', axis=alt.Axis(format="%d %b", grid=True, gridColor="#f0f2f6")), x2='Fin',
         y=alt.Y('Nombre', sort=None, title='', axis=alt.Axis(labelFontWeight="bold")),
         color=alt.Color('Estado', scale=alt.Scale(domain=['Realizado', 'Pendiente'], range=['#002060', '#a0aabf']), legend=alt.Legend(title="Estado", orient="bottom"))
-    ).properties(height=max(150, len(df_plot)*35))
+    ).properties(height=max(120, len(df_plot)*30))
     st.altair_chart(chart, use_container_width=True)
 
 # --- CARGA DE DATOS ---
@@ -191,7 +201,6 @@ def init_okr_structure(q_name, i, meses):
         cols_c = ["Criterio", "Tipo", "Meta", "UM", "< Mejor", "%"]
         for m in meses: cols_c.extend([f"{m} Prog", f"{m} Real"])
         df_c = pd.DataFrame(columns=cols_c)
-        for _ in range(3): df_c.loc[len(df_c)] = ["", "Promedio", 0.0, "U", "NO", 33.3] + [0.0]*(len(meses)*2)
         st.session_state[f"df_crit_{q_name}_{i}"] = df_c
         st.session_state[f"df_tareas_{q_name}_{i}"] = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"])
 
@@ -228,8 +237,6 @@ def cargar_datos():
                 new_row = [str(row.get("KPI_Nombre", "")), str(row.get("Tipo", "Promedio")), float(row.get("Meta", 0.0)), str(row.get("UM", "U")), str(row.get("< Mejor", "NO")), float(row.get("Peso_%", 20.0))]
                 for m in meses: new_row.extend([float(row.get(f"{m}_P", 0.0)), float(row.get(f"{m}_R", 0.0))])
                 df_k.loc[len(df_k)] = new_row
-        else:
-            df_k.loc[0] = ["", "Promedio", 0.0, "U", "NO", 0.0] + [0.0]*(len(meses)*2)
         
         st.session_state[f"df_kpi_{q_name}"] = df_k
 
@@ -243,7 +250,7 @@ def cargar_datos():
                 st.session_state[f"okr_{q_name}_{i}_salud"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
             
             if not df_crit.empty:
-                crit_okr = df_crit[(df_crit['OKR_ID'] == i)].reset_index(drop=True)
+                crit_okr = df_crit[(df_crit['OKR_ID'] == i) & (df_crit['Trimestre_ID'] == q_name) if 'Trimestre_ID' in df_crit.columns else (df_crit['OKR_ID'] == i)].reset_index(drop=True)
                 if len(crit_okr) > 0:
                     df_c_temp = st.session_state[f"df_crit_{q_name}_{i}"]
                     for c_idx in range(len(crit_okr)):
@@ -285,7 +292,7 @@ def guardar_en_bd():
         
     cols_okr = ["onetrack_id", "OKR_ID", "OKR_Nombre", "Objetivo", "Peso_%", "Estatus_Salud"]
     
-    cols_crit = ["onetrack_id", "OKR_ID", "Criterio_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%"]
+    cols_crit = ["onetrack_id", "OKR_ID", "Trimestre_ID", "Criterio_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%"]
     for q_n, meses in trimestres.items():
         for m in meses: cols_crit.extend([f"{m}_P", f"{m}_R"])
         
@@ -315,28 +322,26 @@ def guardar_en_bd():
                                 row[f"{m}_P"] = matches[f"{m} Prog"].iloc[0]
                                 row[f"{m}_R"] = matches[f"{m} Real"].iloc[0]
                         else:
-                            for m in meses:
-                                row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
+                            for m in meses: row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
                 kpis_data.append(row)
 
     for i in range(1, 6):
         o_nom = st.session_state.get(f"okr_Q1_{i}_nom", "")
         if o_nom:
-            okrs_data.append({"onetrack_id": token, "OKR_ID": i, "OKR_Nombre": o_nom, "Objetivo": st.session_state.get(f"okr_Q1_{i}_obj", ""), "Peso_%": float(st.session_state.get(f"okr_Q1_{i}_peso", 20.0)), "Estatus_Salud": st.session_state.get(f"okr_Q1_{i}_salud", "🟢 En Tiempo")})
+            okrs_data.append({"onetrack_id": token, "OKR_ID": i, "OKR_Nombre": o_nom, "Objetivo": st.session_state.get(f"okr_Q1_{i}_obj", ""), "Peso_%": float(st.session_state.get(f"okr_Q1_{i}_peso", 20.0)), "Estatus_Salud": st.session_state.get(f"sel_salud_Q1_{i}", st.session_state.get(f"okr_Q1_{i}_salud", "🟢 En Tiempo"))})
             
-            df_c = st.session_state.get(f"df_crit_Q1_{i}", pd.DataFrame())
-            if not df_c.empty:
-                for c_idx in range(len(df_c)):
-                    c_nom = df_c["Criterio"].iloc[c_idx]
-                    if str(c_nom).strip() != "":
-                        c_row = {"onetrack_id": token, "OKR_ID": i, "Criterio_Nombre": c_nom, "Tipo": df_c["Tipo"].iloc[c_idx], "Meta": df_c["Meta"].iloc[c_idx], "UM": df_c["UM"].iloc[c_idx], "< Mejor": df_c["< Mejor"].iloc[c_idx], "Peso_%": df_c["%"].iloc[c_idx]}
-                        for q_n, meses in trimestres.items():
-                            df_cq = st.session_state[f"df_crit_{q_n}_{i}"]
-                            if c_idx < len(df_cq):
-                                for m in meses:
-                                    c_row[f"{m}_P"] = df_cq[f"{m} Prog"].iloc[c_idx]
-                                    c_row[f"{m}_R"] = df_cq[f"{m} Real"].iloc[c_idx]
-                        crit_data.append(c_row)
+            for q_n, meses in trimestres.items():
+                df_c = st.session_state.get(f"df_crit_{q_n}_{i}", pd.DataFrame())
+                if not df_c.empty:
+                    for c_idx in range(len(df_c)):
+                        c_nom = df_c["Criterio"].iloc[c_idx]
+                        if str(c_nom).strip() != "":
+                            c_row = {"onetrack_id": token, "OKR_ID": i, "Trimestre_ID": q_n, "Criterio_Nombre": c_nom, "Tipo": df_c["Tipo"].iloc[c_idx], "Meta": df_c["Meta"].iloc[c_idx], "UM": df_c["UM"].iloc[c_idx], "< Mejor": df_c["< Mejor"].iloc[c_idx], "Peso_%": df_c["%"].iloc[c_idx]}
+                            for mx in meses_totales: c_row[f"{mx}_P"], c_row[f"{mx}_R"] = 0.0, 0.0
+                            for m in meses:
+                                c_row[f"{m}_P"] = df_c[f"{m} Prog"].iloc[c_idx]
+                                c_row[f"{m}_R"] = df_c[f"{m} Real"].iloc[c_idx]
+                            crit_data.append(c_row)
                     
             for q_n in trimestres.keys():
                 df_t = st.session_state.get(f"df_tareas_{q_n}_{i}", pd.DataFrame())
@@ -406,14 +411,15 @@ with c_inf3:
 
 st.divider()
 
+v_actual_title = f" {st.session_state.vista_actual}" if st.session_state.vista_actual in trimestres else ""
 col_t, col_btn = st.columns([4, 1])
-with col_t: st.markdown("<h2 style='color:#002060; font-weight:900; margin:0;'>Tablero de Control</h2>", unsafe_allow_html=True)
+with col_t: st.markdown(f"<h2 style='color:#002060; font-weight:900; margin:0;'>Tablero de Control{v_actual_title}</h2>", unsafe_allow_html=True)
 with col_btn:
     if st.button("Guardar Cambios", type="primary", use_container_width=True):
         with st.spinner("Sincronizando de forma rápida..."):
             guardar_en_bd()
             st.session_state.datos_cargados = False
-        st.success("Guardado exitoso en 1s.")
+        st.success("Guardado exitoso.")
 st.write("")
 
 # TARJETAS FRONTALES PONDERACION Y RESULTADOS
@@ -440,10 +446,11 @@ if st.session_state.vista_actual in trimestres.keys():
     q_name = st.session_state.vista_actual
     meses_q = trimestres[q_name]
     
+    for i in range(1, 6): init_okr_structure(q_name, i, meses_q)
+    
     st.markdown(f"<div class='section-title'>KPIs Indicadores - {q_name}</div>", unsafe_allow_html=True)
     render_footer(st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame()), meses_q)
     
-    st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
     st.session_state[f"df_kpi_{q_name}"] = st.data_editor(
         st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame()),
         use_container_width=True, hide_index=True, num_rows="dynamic",
@@ -454,15 +461,50 @@ if st.session_state.vista_actual in trimestres.keys():
         },
         key=f"ed_kpi_{q_name}"
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"<div class='section-title'>Iniciativas Estratégicas - {q_name}</div>", unsafe_allow_html=True)
     for i in range(1, 6):
         st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
         
-        h_col1, h_col2 = st.columns([1, 3])
+        df_c_prog = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
+        acum_ini, tot_peso_ini = 0.0, 0.0
+        has_crit = False
+        if not df_c_prog.empty:
+            for c_idx in range(len(df_c_prog)):
+                if str(df_c_prog["Criterio"].iloc[c_idx]).strip() != "":
+                    has_crit = True
+                    peso_c = float(df_c_prog["%"].iloc[c_idx] or 0)
+                    p_c = sum([float(df_c_prog[f"{m} Prog"].iloc[c_idx] or 0) for m in meses_q])
+                    r_c = sum([float(df_c_prog[f"{m} Real"].iloc[c_idx] or 0) for m in meses_q])
+                    cump_c = calc_cump(p_c, r_c, str(df_c_prog["< Mejor"].iloc[c_idx]))
+                    acum_ini += cump_c * (peso_c / 100.0)
+                    tot_peso_ini += peso_c
+        cump_crit = (acum_ini / (tot_peso_ini / 100.0)) if tot_peso_ini > 0 else 0.0
+        
+        df_t_prog = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
+        tot_t, comp = 0, 0
+        if not df_t_prog.empty:
+            t_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
+            tot_t = len(t_validas)
+            comp = t_validas["Completado"].sum() if tot_t > 0 else 0
+        cump_tareas = (comp / tot_t * 100.0) if tot_t > 0 else 0.0
+        
+        if has_crit: avance_ini = (cump_crit * 0.5) + (cump_tareas * 0.5)
+        else: avance_ini = cump_tareas
+            
+        col_ini = ob_color(avance_ini, float(st.session_state.get("_v_sob", 100.0)), float(st.session_state.get("_v_meta", 90.0)), float(st.session_state.get("_v_med", 80.0)))
+        txt_col = "black" if col_ini in ["#ffff00", "#92d050"] else "white"
+
+        h_col1, h_col2 = st.columns([1, 2.5])
         with h_col1: st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
-        with h_col2: ph_avance_ini = st.empty()
+        with h_col2: 
+            st.markdown(f"""
+            <div style='display:flex; gap:10px; justify-content: flex-end;'>
+                <div style='background:#f0f2f6; color:#002060; padding: 8px 12px; border-radius:6px; font-weight:900; font-size:12px; border:1px solid #d1d5db;'>CRITERIOS: {cump_crit:.1f}%</div>
+                <div style='background:#f0f2f6; color:#002060; padding: 8px 12px; border-radius:6px; font-weight:900; font-size:12px; border:1px solid #d1d5db;'>TAREAS: {cump_tareas:.1f}%</div>
+                <div style='background:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius:6px; font-weight:900; font-size:14px; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>AVANCE INTEGRADO: {avance_ini:.1f}%</div>
+            </div>
+            """, unsafe_allow_html=True)
         
         ch1, ch2, ch3 = st.columns([3, 1, 1])
         with ch1:
@@ -498,23 +540,6 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_crit_{q_name}_{i}"
         )
         
-        df_c_prog = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
-        acum_ini, tot_peso_ini = 0.0, 0.0
-        if not df_c_prog.empty:
-            for c_idx in range(len(df_c_prog)):
-                if str(df_c_prog["Criterio"].iloc[c_idx]).strip() != "":
-                    peso_c = float(df_c_prog["%"].iloc[c_idx] or 0)
-                    p_c = sum([float(df_c_prog[f"{m} Prog"].iloc[c_idx] or 0) for m in meses_q])
-                    r_c = sum([float(df_c_prog[f"{m} Real"].iloc[c_idx] or 0) for m in meses_q])
-                    cump_c = calc_cump(p_c, r_c, str(df_c_prog["< Mejor"].iloc[c_idx]))
-                    acum_ini += cump_c * (peso_c / 100.0)
-                    tot_peso_ini += peso_c
-        avance_ini = (acum_ini / (tot_peso_ini / 100.0)) if tot_peso_ini > 0 else 0.0
-        col_ini = ob_color(avance_ini, float(st.session_state.get("_v_sob", 100.0)), float(st.session_state.get("_v_meta", 90.0)), float(st.session_state.get("_v_med", 80.0)))
-        txt_col = "black" if col_ini in ["#ffff00", "#92d050"] else "white"
-        
-        ph_avance_ini.markdown(f"<div style='background-color:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius: 6px; font-weight: 900; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1); margin-top:2px;'>AVANCE INTEGRADO: {avance_ini:.1f}%</div>", unsafe_allow_html=True)
-        
         st.markdown("<div class='sub-section-title'>Plan de Tareas y Seguimiento</div>", unsafe_allow_html=True)
         st.session_state[f"df_tareas_{q_name}_{i}"] = st.data_editor(
             st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame()),
@@ -523,18 +548,9 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_tar_{q_name}_{i}"
         )
         
-        df_t_prog = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
-        if not df_t_prog.empty:
-            t_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
-            tot_t = len(t_validas)
-            comp = t_validas["Completado"].sum() if tot_t > 0 else 0
-            pct = int((comp / tot_t) * 100) if tot_t > 0 else 0
-            st.markdown(f"<div style='font-size:14px; font-weight:900; color:#002060; margin-bottom:8px;'>Avance de Tareas Operativas: {comp}/{tot_t} ({pct}%)</div>", unsafe_allow_html=True)
-            st.progress(pct / 100.0)
-            st.write("")
-            dibujar_gantt(df_t_prog)
-            
-        st.markdown("</div>", unsafe_allow_html=True)
+        st.write("")
+        dibujar_gantt(st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame()))
+        st.markdown("</div><hr class='iniciativa-divider'>", unsafe_allow_html=True)
 
 elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
@@ -577,13 +593,24 @@ def get_mes_cump(m, q_name):
             peso_o = float(st.session_state.get(f"okr_{q_name}_{i}_peso", 0.0))
             df_c = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
             p_t, r_t = 0.0, 0.0
+            has_crit = False
             if not df_c.empty:
                 for c_i in range(len(df_c)):
                     if str(df_c["Criterio"].iloc[c_i]).strip():
+                        has_crit = True
                         p_t += float(df_c[f"{m} Prog"].iloc[c_i] or 0)
                         r_t += float(df_c[f"{m} Real"].iloc[c_i] or 0)
-            cump_o = calc_cump(p_t, r_t, "NO")
-            acum_o += cump_o * (peso_o / 100.0); t_peso_o += peso_o
+            cump_o_crit = calc_cump(p_t, r_t, "NO") if has_crit else 0.0
+            
+            df_tar = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
+            t_valid = df_tar[df_tar["Tarea"].str.strip() != ""] if not df_tar.empty else pd.DataFrame()
+            tot_t = len(t_valid)
+            cump_o_tar = (t_valid["Completado"].sum() / tot_t * 100.0) if tot_t > 0 else 0.0
+            
+            if has_crit: cump_o_ini = (cump_o_crit * 0.5) + (cump_o_tar * 0.5)
+            else: cump_o_ini = cump_o_tar
+                
+            acum_o += cump_o_ini * (peso_o / 100.0); t_peso_o += peso_o
     res_o = (acum_o / (t_peso_o / 100.0)) if t_peso_o > 0 else 0.0
 
     t_peso_tot = float(st.session_state.get("_p_kpis", 50.0)) + float(st.session_state.get("_p_okrs", 50.0))
@@ -596,7 +623,7 @@ for q, meses in trimestres.items():
     for m in meses:
         rk, ro, rtot = get_mes_cump(m, q)
         anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
-        line_mensual.extend([{"Mes": m, "Tipo": "KPIs Operativos", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
+        line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
         acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
     anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
 
@@ -610,15 +637,22 @@ if st.session_state.vista_actual == "Resumen Anual":
         col_sem, col_space = st.columns([2, 3])
         with col_sem:
             st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Éxito</div>""", unsafe_allow_html=True)
+            
             c1, c2 = st.columns([2, 1])
             c1.markdown("<div class='sem-label' style='background-color:#00b050; color:white;'>Sobresaliente</div>", unsafe_allow_html=True)
-            st.session_state._v_sob = c2.number_input("sob", value=float(st.session_state.get("_v_sob", 100.0)), label_visibility="collapsed", key="cfg_sob")
+            v_sob_c = float(st.session_state.get("_v_sob", 100.0))
+            st.session_state._v_sob = c2.number_input("sob", value=v_sob_c, label_visibility="collapsed", key="cfg_sob")
+            
             c3, c4 = st.columns([2, 1])
             c3.markdown("<div class='sem-label' style='background-color:#92d050; color:white;'>Meta</div>", unsafe_allow_html=True)
-            st.session_state._v_meta = c4.number_input("meta", value=float(st.session_state.get("_v_meta", 90.0)), label_visibility="collapsed", key="cfg_meta")
+            v_meta_c = float(st.session_state.get("_v_meta", 90.0))
+            st.session_state._v_meta = c4.number_input("meta", value=v_meta_c, label_visibility="collapsed", key="cfg_meta")
+            
             c5, c6 = st.columns([2, 1])
             c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio</div>", unsafe_allow_html=True)
-            st.session_state._v_med = c6.number_input("med", value=float(st.session_state.get("_v_med", 80.0)), label_visibility="collapsed", key="cfg_med")
+            v_med_c = float(st.session_state.get("_v_med", 80.0))
+            st.session_state._v_med = c6.number_input("med", value=v_med_c, label_visibility="collapsed", key="cfg_med")
+            
             c7, c8 = st.columns([2, 1])
             c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo</div>", unsafe_allow_html=True)
             c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:800; font-size:16px;'>{st.session_state.get('_v_med', 80.0)}%</div>", unsafe_allow_html=True)
@@ -627,9 +661,7 @@ if st.session_state.vista_actual == "Resumen Anual":
     col_ta, col_ch = st.columns([1.2, 1])
     with col_ta:
         st.markdown("<div class='sub-section-title'>Desempeño Mensual y Trimestral</div>", unsafe_allow_html=True)
-        st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
         st.dataframe(df_anual.style.format({"KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), use_container_width=True, hide_index=True)
-        st.markdown("</div>", unsafe_allow_html=True)
     
     with col_ch:
         st.markdown("<div class='sub-section-title' style='text-align:center;'>Desempeño Trimestral</div>", unsafe_allow_html=True)
@@ -650,7 +682,7 @@ if st.session_state.vista_actual == "Resumen Anual":
     ch_m = alt.Chart(df_m).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes', sort=meses_totales, title='', axis=alt.Axis(labelFontWeight="bold")),
         y=alt.Y('Valor', title='', scale=alt.Scale(domain=[0, 120]), axis=alt.Axis(gridColor="#f0f2f6")),
-        color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs Operativos', 'Iniciativas Estratégicas', 'Desempeño Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
+        color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs', 'Iniciativas Estratégicas', 'Desempeño Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
         tooltip=['Mes', 'Tipo', 'Valor']
     ).properties(height=350)
     st.altair_chart(ch_m, use_container_width=True)
