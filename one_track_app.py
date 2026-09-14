@@ -16,26 +16,19 @@ st.markdown("""
     /* Barra Lateral */
     [data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #e5e7eb; }
     [data-testid="stSidebar"] div[role="radiogroup"] > label {
-        background-color: #f8f9fa;
-        padding: 12px 20px;
-        border-radius: 8px;
-        margin-bottom: 8px;
-        border: 1px solid #e5e7eb;
-        color: #002060 !important;
-        transition: all 0.2s;
+        background-color: #f8f9fa; padding: 12px 20px; border-radius: 8px; margin-bottom: 8px;
+        border: 1px solid #e5e7eb; color: #002060 !important; transition: all 0.2s;
     }
     [data-testid="stSidebar"] div[role="radiogroup"] > label:hover { background-color: #e2e8f0; }
     [data-testid="stSidebar"] div[role="radiogroup"] > label[data-checked="true"] {
-        background-color: #002060 !important;
-        color: #ffffff !important;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        background-color: #002060 !important; color: #ffffff !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     [data-testid="stSidebar"] div[role="radiogroup"] > label > div:first-child { display: none; }
     [data-testid="stSidebar"] div[role="radiogroup"] > label p { font-weight: 800; font-size: 15px; margin: 0; }
 
     /* Titulos y Secciones */
     .section-title { font-size: 24px; font-weight: 800; color: #002060; border-bottom: 2px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
-    .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 15px; text-transform: uppercase; letter-spacing: 0.5px;}
+    .sub-section-title { font-size: 14px; font-weight: 800; color: #4b5563; margin-top: 15px; margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px;}
     .title-placeholder { font-size: 32px; font-weight: 800; color: #002060; display: flex; align-items: center; justify-content: center; height: 80px; letter-spacing: 2px; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #d1d5db; border-radius: 8px; height: 100px; display: flex; align-items: center; justify-content: center; color: #6b7280; font-weight: bold; margin-bottom: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.05);}
     
@@ -43,17 +36,20 @@ st.markdown("""
     .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; }
     .summary-title { font-size: 14px; color: #4b5563; font-weight: 800; margin-bottom: 5px; text-transform: uppercase;}
     .summary-value { font-size: 28px; color: #002060; font-weight: 800; }
-    .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 6px rgba(0,0,0,0.03); }
+    .iniciativa-box { background-color: #ffffff; border: 1px solid #e5e7eb; border-radius: 10px; padding: 25px; margin-bottom: 25px; box-shadow: 0 4px 10px rgba(0,0,0,0.08); }
     .iniciativa-header { font-size: 18px; font-weight: 800; color: #ffffff; background-color: #002060; padding: 8px 15px; border-radius: 6px; margin-bottom: 20px; display: inline-block;}
     
-    /* Configuración Semáforo (Diseño de Tabla) */
-    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02);}
+    /* Ajustes Estéticos para las Tablas (Anti-plano) */
+    div[data-testid="stDataFrame"] > div { border: none; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 12px rgba(0,0,0,0.08); background-color: #ffffff; padding: 4px; border: 1px solid #e2e8f0; }
+    .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 800; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
+    
+    /* Etiquetas del UI */
+    label p { font-weight: 800 !important; color: #002060 !important; }
+    
+    /* Configuración de Semáforo en Anual */
+    .semaforo-container { border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; background-color: #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.02); margin-top: 10px; margin-bottom: 10px;}
     .sem-header { background-color: #002060; color: white; text-align: center; font-weight: 800; padding: 10px; font-size: 14px; text-transform: uppercase; letter-spacing: 1px;}
     .sem-label { padding: 8px 15px; font-weight: 800; text-align: right; border-bottom: 1px solid #f9fafb; font-size: 14px; color: black; display: flex; align-items: center; justify-content: flex-end;}
-    
-    /* Ajustes Generales de Tabla */
-    div[data-testid="stDataFrame"] > div { border: 1px solid #002060; border-radius: 8px; overflow: hidden; }
-    .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 800; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     </style>
 """, unsafe_allow_html=True)
 
@@ -64,8 +60,15 @@ def init_db():
     try:
         df = conn.query("SELECT * FROM usuarios LIMIT 1", ttl=0)
         if 'nombre' not in df.columns: raise Exception("Faltan columnas")
+        if not (df['username'] == 'ONETest').any():
+            df_test = pd.DataFrame([{"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}])
+            df_final = pd.concat([conn.query("SELECT * FROM usuarios", ttl=0), df_test], ignore_index=True)
+            df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
     except Exception:
-        df_admin = pd.DataFrame([{"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""}])
+        df_admin = pd.DataFrame([
+            {"username": "admin", "password": "admin", "role": "admin", "nombre": "Admin", "puesto": "Administrador", "empresa": "ONE TRACK", "logo_url": ""},
+            {"username": "ONETest", "password": "ONETest", "role": "client", "nombre": "Usuario de Prueba", "puesto": "Director General", "empresa": "ONE TRACK Test", "logo_url": ""}
+        ])
         df_admin.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
 
 init_db()
@@ -415,18 +418,16 @@ if st.session_state.vista_actual in trimestres.keys():
     st.markdown(f"<div class='section-title'>KPIs Indicadores - {q_name}</div>", unsafe_allow_html=True)
     render_footer(st.session_state[f"df_kpi_{q_name}"], meses_q)
     
-    st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
     st.session_state[f"df_kpi_{q_name}"] = st.data_editor(
         st.session_state[f"df_kpi_{q_name}"],
         use_container_width=True, hide_index=True, num_rows="dynamic",
         column_config={
             "Tipo": st.column_config.SelectboxColumn(options=["Acumulado", "Promedio", "Valor Final"]), 
-            "UM": st.column_config.SelectboxColumn(options=["U", "$", "%", "Horas"]), 
+            "UM": st.column_config.SelectboxColumn(options=["U", "$", "%", "Tiempo"]), 
             "< Mejor": st.column_config.SelectboxColumn(options=["NO", "SI"])
         },
         key=f"ed_kpi_{q_name}"
     )
-    st.markdown("</div>", unsafe_allow_html=True)
 
     st.markdown(f"<div class='section-title'>Iniciativas Estratégicas - {q_name}</div>", unsafe_allow_html=True)
     for i in range(1, 6):
@@ -441,7 +442,7 @@ if st.session_state.vista_actual in trimestres.keys():
         opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
         salud_act = st.session_state.get(f"okr_{q_name}_{i}_salud", "🟢 En Tiempo")
         if salud_act not in opciones_salud: salud_act = "🟢 En Tiempo"
-        st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("**Salud Actual**", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui")
+        st.session_state[f"sel_salud_{q_name}_{i}"] = ch3.selectbox("**Estatus Actual**", options=opciones_salud, index=opciones_salud.index(salud_act), key=f"sel_salud_{q_name}_{i}_ui")
         
         st.text_area("**Objetivo Principal:**", value=st.session_state[f"okr_{q_name}_{i}_obj"], key=f"okr_{q_name}_{i}_obj", height=80)
         
@@ -453,55 +454,46 @@ if st.session_state.vista_actual in trimestres.keys():
             key=f"ed_crit_{q_name}_{i}"
         )
         
+        # --- MATEMATICA: CALCULO DE AVANCE DE INICIATIVA ---
+        df_c_prog = st.session_state[f"df_crit_{q_name}_{i}"]
+        acum_ini, tot_peso_ini = 0.0, 0.0
+        for c_idx in range(len(df_c_prog)):
+            if str(df_c_prog["Criterio"].iloc[c_idx]).strip() != "":
+                peso_c = float(df_c_prog["%"].iloc[c_idx] or 0)
+                p_c = sum([float(df_c_prog[f"{m} Prog"].iloc[c_idx] or 0) for m in meses_q])
+                r_c = sum([float(df_c_prog[f"{m} Real"].iloc[c_idx] or 0) for m in meses_q])
+                cump_c = calc_cump(p_c, r_c, str(df_c_prog["< Mejor"].iloc[c_idx]))
+                acum_ini += cump_c * (peso_c / 100.0)
+                tot_peso_ini += peso_c
+        avance_ini = (acum_ini / (tot_peso_ini / 100.0)) if tot_peso_ini > 0 else 0.0
+        
+        col_ini = ob_color(avance_ini, st.session_state.get("_v_sob", 100.0), st.session_state.get("_v_meta", 90.0), st.session_state.get("_v_med", 80.0))
+        txt_col = "black" if col_ini in ["#ffff00", "#92d050"] else "white"
+        st.markdown(f"<div style='background-color:{col_ini}; color:{txt_col}; padding: 8px; border-radius: 6px; font-weight: 800; text-align: center; margin-top: 10px; margin-bottom: 20px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);'>Avance Integrado de la Iniciativa ({q_name}): {avance_ini:.1f}%</div>", unsafe_allow_html=True)
+        
         st.markdown("<div class='sub-section-title'>Plan de Tareas y Seguimiento (Gantt)</div>", unsafe_allow_html=True)
-        cg1, cg2 = st.columns([1, 1])
-        with cg1:
-            st.session_state[f"df_tareas_{q_name}_{i}"] = st.data_editor(
-                st.session_state[f"df_tareas_{q_name}_{i}"],
-                use_container_width=True, hide_index=True, num_rows="dynamic",
-                column_config={"Jerarquia": st.column_config.TextColumn(width="small", help="Ej: 1, 1.1"), "Inicio": st.column_config.DateColumn(format="YYYY-MM-DD"), "Fin": st.column_config.DateColumn(format="YYYY-MM-DD")},
-                key=f"ed_tar_{q_name}_{i}"
-            )
-        with cg2:
-            df_t_prog = st.session_state[f"df_tareas_{q_name}_{i}"]
-            t_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
-            tot_t = len(t_validas)
-            comp = t_validas["Completado"].sum() if tot_t > 0 else 0
-            pct = int((comp / tot_t) * 100) if tot_t > 0 else 0
-            st.markdown(f"<div style='font-size:14px; font-weight:800; color:#002060; margin-bottom:8px;'>Avance de Tareas Operativas: {comp}/{tot_t} ({pct}%)</div>", unsafe_allow_html=True)
-            st.progress(pct / 100.0)
-            st.write("")
-            dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
+        st.session_state[f"df_tareas_{q_name}_{i}"] = st.data_editor(
+            st.session_state[f"df_tareas_{q_name}_{i}"],
+            use_container_width=True, hide_index=True, num_rows="dynamic",
+            column_config={"Jerarquia": st.column_config.TextColumn(width="small", help="Ej: 1, 1.1"), "Inicio": st.column_config.DateColumn(format="YYYY-MM-DD"), "Fin": st.column_config.DateColumn(format="YYYY-MM-DD")},
+            key=f"ed_tar_{q_name}_{i}"
+        )
+        
+        df_t_prog = st.session_state[f"df_tareas_{q_name}_{i}"]
+        t_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
+        tot_t = len(t_validas)
+        comp = t_validas["Completado"].sum() if tot_t > 0 else 0
+        pct = int((comp / tot_t) * 100) if tot_t > 0 else 0
+        st.markdown(f"<div style='font-size:14px; font-weight:800; color:#002060; margin-bottom:8px;'>Avance de Tareas Operativas: {comp}/{tot_t} ({pct}%)</div>", unsafe_allow_html=True)
+        st.progress(pct / 100.0)
+        st.write("")
+        dibujar_gantt(st.session_state[f"df_tareas_{q_name}_{i}"])
             
         st.markdown("</div>", unsafe_allow_html=True)
 
 elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
-    st.markdown("<div class='sub-section-title'>Configuración de Semáforos (%)</div>", unsafe_allow_html=True)
-    st.info("Estos rangos definen qué colores se mostrarán automáticamente en tus recuadros de avance de todo el año.")
-    
-    col_sem, col_space = st.columns([2, 3])
-    with col_sem:
-        st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Éxito</div>""", unsafe_allow_html=True)
-        
-        c1, c2 = st.columns([2, 1])
-        c1.markdown("<div class='sem-label' style='background-color:#00b050; color:white;'>Sobresaliente</div>", unsafe_allow_html=True)
-        st.session_state._v_sob = c2.number_input("sob", value=st.session_state.get("_v_sob", 100.0), label_visibility="collapsed", key="cfg_sob")
-        
-        c3, c4 = st.columns([2, 1])
-        c3.markdown("<div class='sem-label' style='background-color:#92d050; color:white;'>Meta</div>", unsafe_allow_html=True)
-        st.session_state._v_meta = c4.number_input("meta", value=st.session_state.get("_v_meta", 90.0), label_visibility="collapsed", key="cfg_meta")
-        
-        c5, c6 = st.columns([2, 1])
-        c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio</div>", unsafe_allow_html=True)
-        st.session_state._v_med = c6.number_input("med", value=st.session_state.get("_v_med", 80.0), label_visibility="collapsed", key="cfg_med")
-        
-        c7, c8 = st.columns([2, 1])
-        c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo</div>", unsafe_allow_html=True)
-        c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:800; font-size:16px;'>{st.session_state.get('_v_med', 80.0)}%</div>", unsafe_allow_html=True)
-        st.markdown("</div>", unsafe_allow_html=True)
-
-    st.markdown("<br><div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
     n_pwd = st.text_input("**Nueva Contraseña**", type="password", placeholder="Escribe aquí para cambiar tu contraseña")
     if st.button("Actualizar Contraseña", type="primary"):
@@ -558,6 +550,26 @@ df_anual = pd.DataFrame(anual_data)
 
 if st.session_state.vista_actual == "Resumen Anual":
     st.markdown("<div class='section-title'>Resumen Anual del Desempeño</div>", unsafe_allow_html=True)
+    
+    with st.expander("⚙️ Configuración de Semáforos (Criterios de Éxito)", expanded=False):
+        st.info("Estos rangos definen qué colores se mostrarán automáticamente en tus recuadros de avance de todo el año.")
+        col_sem, col_space = st.columns([2, 3])
+        with col_sem:
+            st.markdown("""<div class='semaforo-container'><div class='sem-header'>Criterios de Éxito</div>""", unsafe_allow_html=True)
+            c1, c2 = st.columns([2, 1])
+            c1.markdown("<div class='sem-label' style='background-color:#00b050; color:white;'>Sobresaliente</div>", unsafe_allow_html=True)
+            st.session_state._v_sob = c2.number_input("sob", value=st.session_state.get("_v_sob", 100.0), label_visibility="collapsed", key="cfg_sob")
+            c3, c4 = st.columns([2, 1])
+            c3.markdown("<div class='sem-label' style='background-color:#92d050; color:white;'>Meta</div>", unsafe_allow_html=True)
+            st.session_state._v_meta = c4.number_input("meta", value=st.session_state.get("_v_meta", 90.0), label_visibility="collapsed", key="cfg_meta")
+            c5, c6 = st.columns([2, 1])
+            c5.markdown("<div class='sem-label' style='background-color:#ffff00;'>Medio</div>", unsafe_allow_html=True)
+            st.session_state._v_med = c6.number_input("med", value=st.session_state.get("_v_med", 80.0), label_visibility="collapsed", key="cfg_med")
+            c7, c8 = st.columns([2, 1])
+            c7.markdown("<div class='sem-label' style='background-color:#ff0000; color:white; border:none;'>Bajo</div>", unsafe_allow_html=True)
+            c8.markdown(f"<div style='text-align:center; padding-top:8px; font-weight:800; font-size:16px;'>{st.session_state.get('_v_med', 80.0)}%</div>", unsafe_allow_html=True)
+            st.markdown("</div>", unsafe_allow_html=True)
+    
     col_ta, col_ch = st.columns([1.2, 1])
     with col_ta:
         st.markdown("<div class='sub-section-title'>Desempeño Mensual y Trimestral</div>", unsafe_allow_html=True)
