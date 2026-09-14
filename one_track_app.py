@@ -27,6 +27,7 @@ st.markdown("""
     .custom-label { font-size: 14px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; margin-top: 10px; letter-spacing: 0.5px; }
     
     .img-placeholder { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; padding: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.04);}
+    .title-placeholder { display: flex; align-items: center; justify-content: center; height: 160px; background-color: transparent; border: none; box-shadow: none; }
     
     /* Forzar fondo blanco en campos de texto/inputs */
     div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div {
@@ -184,11 +185,11 @@ def dibujar_gantt(df_tareas):
     if df_plot.empty: return
     df_plot['Nombre'] = df_plot['Jerarquia'] + " " + df_plot['Tarea']
     df_plot['Estado'] = df_plot['Completado'].apply(lambda x: "Realizado" if x else "Pendiente")
-    chart = alt.Chart(df_plot).mark_bar(cornerRadius=4, height=18).encode(
+    chart = alt.Chart(df_plot).mark_bar(cornerRadius=4, size=20).encode(
         x=alt.X('Inicio', title='', axis=alt.Axis(format="%d %b", grid=True, gridColor="#f0f2f6")), x2='Fin',
-        y=alt.Y('Nombre', sort=None, title='', axis=alt.Axis(labelFontWeight="bold")),
+        y=alt.Y('Nombre', sort=None, title='', axis=alt.Axis(labelFontWeight="bold", labelLimit=300)),
         color=alt.Color('Estado', scale=alt.Scale(domain=['Realizado', 'Pendiente'], range=['#002060', '#a0aabf']), legend=alt.Legend(title="Estado", orient="bottom"))
-    ).properties(height=max(120, len(df_plot)*30))
+    ).properties(height=alt.Step(40))
     st.altair_chart(chart, use_container_width=True)
 
 # --- CARGA DE DATOS ---
@@ -216,7 +217,6 @@ def cargar_datos():
 
     es_nuevo = df_kpis.empty
     
-    # Determinar número de iniciativas (Default = 1)
     if not df_okrs.empty:
         max_id = df_okrs["OKR_ID"].max()
         st.session_state.num_iniciativas = int(max_id) if pd.notna(max_id) else 1
@@ -288,7 +288,7 @@ def cargar_datos():
 
 cargar_datos()
 
-# --- OPTIMIZACION DE GUARDADO RÁPIDO ---
+# --- OPTIMIZACION DE GUARDADO RÁPIDO CON ESQUEMA FUERTE ---
 def guardar_en_bd():
     kpis_data, okrs_data, crit_data, tareas_data = [], [], [], []
     peso_k, peso_o = float(st.session_state.get("_p_kpis", 50.0)), float(st.session_state.get("_p_okrs", 50.0))
@@ -394,6 +394,63 @@ with st.sidebar:
         st.session_state.user_info = None
         st.rerun()
 
+# --- CÁLCULOS REACTIVOS INICIALES PARA TARJETAS ---
+def get_mes_cump(m, q_name):
+    t_peso_k, acum_k = 0.0, 0.0
+    df_kpi = st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame())
+    if not df_kpi.empty:
+        for i in range(len(df_kpi)):
+            if str(df_kpi["KPIs Indicadores"].iloc[i]).strip():
+                p = float(df_kpi[f"{m} Prog"].iloc[i] or 0)
+                r = float(df_kpi[f"{m} Real"].iloc[i] or 0)
+                peso = float(df_kpi["Peso %"].iloc[i] or 0)
+                cump = calc_cump(p, r, str(df_kpi["< Mejor"].iloc[i]))
+                acum_k += cump * (peso / 100.0); t_peso_k += peso
+    res_k = (acum_k / (t_peso_k / 100.0)) if t_peso_k > 0 else 0.0
+
+    t_peso_o, acum_o = 0.0, 0.0
+    for i in range(1, st.session_state.get("num_iniciativas", 1) + 1):
+        if str(st.session_state.get(f"okr_{q_name}_{i}_nom", "")).strip():
+            peso_o = float(st.session_state.get(f"okr_{q_name}_{i}_peso", 0.0))
+            
+            df_c = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
+            p_t, r_t = 0.0, 0.0
+            has_crit = False
+            if not df_c.empty:
+                for c_i in range(len(df_c)):
+                    if str(df_c["Criterio"].iloc[c_i]).strip():
+                        has_crit = True
+                        p_t += float(df_c[f"{m} Prog"].iloc[c_i] or 0)
+                        r_t += float(df_c[f"{m} Real"].iloc[c_i] or 0)
+            cump_o_crit = calc_cump(p_t, r_t, "NO") if has_crit else 0.0
+            
+            df_tar = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
+            t_valid = df_tar[df_tar["Tarea"].str.strip() != ""] if not df_tar.empty else pd.DataFrame()
+            tot_t = len(t_valid)
+            cump_o_tar = (t_valid["Completado"].sum() / tot_t * 100.0) if tot_t > 0 else 0.0
+            
+            if has_crit: cump_o_ini = (cump_o_crit * 0.5) + (cump_o_tar * 0.5)
+            else: cump_o_ini = cump_o_tar
+                
+            acum_o += cump_o_ini * (peso_o / 100.0); t_peso_o += peso_o
+    res_o = (acum_o / (t_peso_o / 100.0)) if t_peso_o > 0 else 0.0
+
+    t_peso_tot = float(st.session_state.get("_p_kpis", 50.0)) + float(st.session_state.get("_p_okrs", 50.0))
+    res_tot = ((res_k * (float(st.session_state.get("_p_kpis", 50.0)) / 100.0)) + (res_o * (float(st.session_state.get("_p_okrs", 50.0)) / 100.0))) / (t_peso_tot / 100.0) if t_peso_tot > 0 else 0.0
+    return res_k, res_o, res_tot
+
+anual_data, line_mensual = [], []
+for q, meses in trimestres.items():
+    acum_k_q, acum_o_q, acum_tot_q = 0.0, 0.0, 0.0
+    for m in meses:
+        rk, ro, rtot = get_mes_cump(m, q)
+        anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
+        line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
+        acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
+    anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
+
+df_anual = pd.DataFrame(anual_data)
+
 # --- UI PRINCIPAL HEADER E IDENTIFICACION ---
 c_img1, c_img2, c_img3 = st.columns([1, 2, 1])
 with c_img1: 
@@ -432,7 +489,7 @@ with col_btn:
         st.success("Guardado exitoso.")
 st.write("")
 
-# TARJETAS FRONTALES PONDERACION Y RESULTADOS
+# --- TARJETAS FRONTALES CON LOGICA TRIMESTRAL O ANUAL ---
 col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
 with col_w:
     st.markdown("<div class='summary-card' style='padding:15px;'><p class='summary-title'>Ponderación Global</p>", unsafe_allow_html=True)
@@ -446,9 +503,26 @@ with col_w:
         v_po = float(st.session_state.get("_p_okrs", 50.0))
         st.session_state._p_okrs = st.number_input("Ini", value=v_po, key="ui_p_okrs", label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
-with col_s1: ph_kpi = st.empty()
-with col_s2: ph_okr = st.empty()
-with col_s3: ph_tot = st.empty()
+
+if st.session_state.vista_actual in trimestres.keys():
+    q_sel = st.session_state.vista_actual
+    df_q = df_anual[df_anual["Trimestre"] == q_sel]
+    res_k_total = df_q["KPIs"].mean() * 100
+    res_o_total = df_q["Iniciativas"].mean() * 100
+    res_tot_final = df_q["Integrado"].mean() * 100
+    l_kpi, l_okr, l_tot = f"Indicadores ({q_sel})", f"Iniciativas ({q_sel})", f"Total ONE TRACK ({q_sel})"
+else:
+    res_k_total, res_o_total = df_anual["KPIs"].mean() * 100, df_anual["Iniciativas"].mean() * 100
+    res_tot_final = df_anual["Integrado"].mean() * 100
+    l_kpi, l_okr, l_tot = "Indicadores (Anual)", "Iniciativas (Anual)", "Total ONE TRACK (Anual)"
+
+v_sob, v_meta, v_med = float(st.session_state.get("_v_sob", 100.0)), float(st.session_state.get("_v_meta", 90.0)), float(st.session_state.get("_v_med", 89.0))
+c_kpi, c_okr, c_tot = ob_color(res_k_total, v_sob, v_meta, v_med), ob_color(res_o_total, v_sob, v_meta, v_med), ob_color(res_tot_final, v_sob, v_meta, v_med)
+txt_kpi, txt_okr, txt_tot = ("black" if c_kpi in ["#ffff00", "#92d050"] else "white"), ("black" if c_okr in ["#ffff00", "#92d050"] else "white"), ("black" if c_tot in ["#ffff00", "#92d050"] else "white")
+
+with col_s1: st.markdown(f"<div class='summary-card' style='background-color:{c_kpi};'><p class='summary-title' style='color:{txt_kpi};'>{l_kpi}</p><p class='summary-value' style='color:{txt_kpi};'>{res_k_total:.0f} %</p></div>", unsafe_allow_html=True)
+with col_s2: st.markdown(f"<div class='summary-card' style='background-color:{c_okr};'><p class='summary-title' style='color:{txt_okr};'>{l_okr}</p><p class='summary-value' style='color:{txt_okr};'>{res_o_total:.0f} %</p></div>", unsafe_allow_html=True)
+with col_s3: st.markdown(f"<div class='summary-card' style='background-color:{c_tot};'><p class='summary-title' style='color:{txt_tot};'>{l_tot}</p><p class='summary-value' style='color:{txt_tot};'>{res_tot_final:.0f} %</p></div>", unsafe_allow_html=True)
 st.write("")
 
 # --- VISTAS NAVEGABLES ---
@@ -607,63 +681,7 @@ elif st.session_state.vista_actual == "Configuración de Cuenta":
         else:
             st.warning("Escribe una contraseña válida.")
 
-# --- CÁLCULOS Y PESTAÑA RESUMEN ANUAL ---
-def get_mes_cump(m, q_name):
-    t_peso_k, acum_k = 0.0, 0.0
-    df_kpi = st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame())
-    if not df_kpi.empty:
-        for i in range(len(df_kpi)):
-            if str(df_kpi["KPIs Indicadores"].iloc[i]).strip():
-                p = float(df_kpi[f"{m} Prog"].iloc[i] or 0)
-                r = float(df_kpi[f"{m} Real"].iloc[i] or 0)
-                peso = float(df_kpi["Peso %"].iloc[i] or 0)
-                cump = calc_cump(p, r, str(df_kpi["< Mejor"].iloc[i]))
-                acum_k += cump * (peso / 100.0); t_peso_k += peso
-    res_k = (acum_k / (t_peso_k / 100.0)) if t_peso_k > 0 else 0.0
-
-    t_peso_o, acum_o = 0.0, 0.0
-    for i in range(1, st.session_state.get("num_iniciativas", 1) + 1):
-        if str(st.session_state.get(f"okr_{q_name}_{i}_nom", "")).strip():
-            peso_o = float(st.session_state.get(f"okr_{q_name}_{i}_peso", 0.0))
-            df_c = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
-            p_t, r_t = 0.0, 0.0
-            has_crit = False
-            if not df_c.empty:
-                for c_i in range(len(df_c)):
-                    if str(df_c["Criterio"].iloc[c_i]).strip():
-                        has_crit = True
-                        p_t += float(df_c[f"{m} Prog"].iloc[c_i] or 0)
-                        r_t += float(df_c[f"{m} Real"].iloc[c_i] or 0)
-            cump_o_crit = calc_cump(p_t, r_t, "NO") if has_crit else 0.0
-            
-            df_tar = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
-            t_valid = df_tar[df_tar["Tarea"].str.strip() != ""] if not df_tar.empty else pd.DataFrame()
-            tot_t = len(t_valid)
-            cump_o_tar = (t_valid["Completado"].sum() / tot_t * 100.0) if tot_t > 0 else 0.0
-            
-            if has_crit: cump_o_ini = (cump_o_crit * 0.5) + (cump_o_tar * 0.5)
-            else: cump_o_ini = cump_o_tar
-                
-            acum_o += cump_o_ini * (peso_o / 100.0); t_peso_o += peso_o
-    res_o = (acum_o / (t_peso_o / 100.0)) if t_peso_o > 0 else 0.0
-
-    t_peso_tot = float(st.session_state.get("_p_kpis", 50.0)) + float(st.session_state.get("_p_okrs", 50.0))
-    res_tot = ((res_k * (float(st.session_state.get("_p_kpis", 50.0)) / 100.0)) + (res_o * (float(st.session_state.get("_p_okrs", 50.0)) / 100.0))) / (t_peso_tot / 100.0) if t_peso_tot > 0 else 0.0
-    return res_k, res_o, res_tot
-
-anual_data, line_mensual = [], []
-for q, meses in trimestres.items():
-    acum_k_q, acum_o_q, acum_tot_q = 0.0, 0.0, 0.0
-    for m in meses:
-        rk, ro, rtot = get_mes_cump(m, q)
-        anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
-        line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
-        acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
-    anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
-
-df_anual = pd.DataFrame(anual_data)
-
-if st.session_state.vista_actual == "Resumen Anual":
+elif st.session_state.vista_actual == "Resumen Anual":
     st.markdown("<div class='section-title'>Resumen Anual del Desempeño</div>", unsafe_allow_html=True)
     
     with st.expander("⚙️ Configuración de Semáforos (Criterios de Éxito)", expanded=False):
@@ -695,7 +713,9 @@ if st.session_state.vista_actual == "Resumen Anual":
     col_ta, col_ch = st.columns([1.2, 1])
     with col_ta:
         st.markdown("<div class='sub-section-title'>Desempeño Mensual y Trimestral</div>", unsafe_allow_html=True)
+        st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
         st.dataframe(df_anual.style.format({"KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), use_container_width=True, hide_index=True)
+        st.markdown("</div>", unsafe_allow_html=True)
     
     with col_ch:
         st.markdown("<div class='sub-section-title' style='text-align:center;'>Desempeño Trimestral</div>", unsafe_allow_html=True)
@@ -720,15 +740,3 @@ if st.session_state.vista_actual == "Resumen Anual":
         tooltip=['Mes', 'Tipo', 'Valor']
     ).properties(height=350)
     st.altair_chart(ch_m, use_container_width=True)
-
-# --- CALCULO REACTIVO TARJETAS FRONTALES ---
-res_k_total, res_o_total = df_anual["KPIs"].mean() * 100, df_anual["Iniciativas"].mean() * 100
-res_tot_final = df_anual["Integrado"].mean() * 100
-v_sob, v_meta, v_med = float(st.session_state.get("_v_sob", 100.0)), float(st.session_state.get("_v_meta", 90.0)), float(st.session_state.get("_v_med", 89.0))
-
-c_kpi, c_okr, c_tot = ob_color(res_k_total, v_sob, v_meta, v_med), ob_color(res_o_total, v_sob, v_meta, v_med), ob_color(res_tot_final, v_sob, v_meta, v_med)
-txt_kpi, txt_okr, txt_tot = ("black" if c_kpi in ["#ffff00", "#92d050"] else "white"), ("black" if c_okr in ["#ffff00", "#92d050"] else "white"), ("black" if c_tot in ["#ffff00", "#92d050"] else "white")
-
-ph_kpi.markdown(f"<div class='summary-card' style='background-color:{c_kpi};'><p class='summary-title' style='color:{txt_kpi};'>Indicadores (Acumulado)</p><p class='summary-value' style='color:{txt_kpi};'>{res_k_total:.0f} %</p></div>", unsafe_allow_html=True)
-ph_okr.markdown(f"<div class='summary-card' style='background-color:{c_okr};'><p class='summary-title' style='color:{txt_okr};'>Iniciativas (Acumulado)</p><p class='summary-value' style='color:{txt_okr};'>{res_o_total:.0f} %</p></div>", unsafe_allow_html=True)
-ph_tot.markdown(f"<div class='summary-card' style='background-color:{c_tot};'><p class='summary-title' style='color:{txt_tot};'>Total ONE TRACK</p><p class='summary-value' style='color:{txt_tot};'>{res_tot_final:.0f} %</p></div>", unsafe_allow_html=True)
