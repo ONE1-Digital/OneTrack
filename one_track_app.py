@@ -83,7 +83,7 @@ def generar_dummy_onetest():
 
     for q_name, meses in trimestres.items():
         # KPIs Dummy (Globales)
-        df_k = pd.DataFrame(columns=["KPIs Indicadores", "Tipo", "Meta", "UM", "< Mejor", "Peso %"] + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
+        df_k = pd.DataFrame(columns=["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"] + [f"{m} Prog" for m in meses] + [f"{m} Real" for m in meses])
         df_k.loc[1] = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0] + [166666.0, 166666.0 * mult_q[q_name]] * 3
         df_k.loc[2] = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0] + [95.0, 95.0 * mult_q[q_name]] * 3
         st.session_state[f"df_kpi_{q_name}"] = df_k
@@ -234,7 +234,7 @@ def render_footer(df, meses):
     for m in meses:
         total_peso, acumulado = 0.0, 0.0
         for i in range(len(df)):
-            if str(df["KPIs Indicadores"].iloc[i]).strip() != "":
+            if str(df["Indicadores Clave de Desempeño (KPIs)"].iloc[i]).strip() != "":
                 p, r = float(df[f"{m} Prog"].iloc[i] or 0), float(df[f"{m} Real"].iloc[i] or 0)
                 peso = float(df["Peso %"].iloc[i] or 0)
                 cump = calc_cump(p, r, str(df["< Mejor"].iloc[i]))
@@ -264,11 +264,11 @@ def dibujar_gantt(df_tareas):
 
 # --- CARGA DE DATOS ---
 def init_okr_structure(q_name, i, meses):
-    if f"data_nom_{q_name}_{i}" not in st.session_state:
-        st.session_state[f"data_nom_{q_name}_{i}"] = ""
-        st.session_state[f"data_obj_{q_name}_{i}"] = ""
-        st.session_state[f"data_peso_{q_name}_{i}"] = 20.0
-        st.session_state[f"data_salud_{q_name}_{i}"] = "🟢 En Tiempo"
+    if f"ui_nom_{q_name}_{i}" not in st.session_state:
+        st.session_state[f"ui_nom_{q_name}_{i}"] = ""
+        st.session_state[f"ui_obj_{q_name}_{i}"] = ""
+        st.session_state[f"ui_peso_{q_name}_{i}"] = 20.0
+        st.session_state[f"ui_salud_{q_name}_{i}"] = "🟢 En Tiempo"
         
         cols_c = ["Criterio", "Tipo", "Meta", "UM", "< Mejor", "%"]
         for m in meses: cols_c.extend([f"{m} Prog", f"{m} Real"])
@@ -303,19 +303,19 @@ def cargar_datos():
         else:
             st.session_state[f"num_iniciativas_{q_name}"] = 1
 
-    st.session_state["data_p_kpis"] = float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0)) if not es_nuevo else 50.0
-    st.session_state["data_p_okrs"] = float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0
+    st.session_state["ui_p_kpis"] = float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0)) if not es_nuevo else 50.0
+    st.session_state["ui_p_okrs"] = float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0
     st.session_state["cfg_sob"] = float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0
     st.session_state["cfg_meta"] = float(df_kpis.iloc[0].get("U_Verde", 90.0)) if not es_nuevo else 90.0
     st.session_state["cfg_med"] = float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0
     
-    st.session_state["data_empresa"] = str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", "")
-    st.session_state["data_dueno"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", "")
-    st.session_state["data_puesto"] = str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else st.session_state.user_info.get("puesto", "")
+    st.session_state["ui_empresa"] = str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", "")
+    st.session_state["ui_dueno"] = str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", "")
+    st.session_state["ui_puesto"] = str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else st.session_state.user_info.get("puesto", "")
     st.session_state["logo_input"] = str(df_kpis.iloc[0].get("Logo_Cliente", "")) if not es_nuevo else st.session_state.user_info.get("logo_url", "")
 
     for q_name, meses in trimestres.items():
-        cols_kpi = ["KPIs Indicadores", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
+        cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
         for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real"])
         df_k = pd.DataFrame(columns=cols_kpi)
 
@@ -338,10 +338,10 @@ def cargar_datos():
                 match_okr = q_okrs_db[q_okrs_db['OKR_ID'] == i]
                 if not es_nuevo and not match_okr.empty:
                     row_o = match_okr.iloc[0]
-                    st.session_state[f"data_nom_{q_name}_{i}"] = str(row_o.get("OKR_Nombre", ""))
-                    st.session_state[f"data_obj_{q_name}_{i}"] = str(row_o.get("Objetivo", ""))
-                    st.session_state[f"data_peso_{q_name}_{i}"] = float(row_o.get("Peso_%", 20.0))
-                    st.session_state[f"data_salud_{q_name}_{i}"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
+                    st.session_state[f"ui_nom_{q_name}_{i}"] = str(row_o.get("OKR_Nombre", ""))
+                    st.session_state[f"ui_obj_{q_name}_{i}"] = str(row_o.get("Objetivo", ""))
+                    st.session_state[f"ui_peso_{q_name}_{i}"] = float(row_o.get("Peso_%", 20.0))
+                    st.session_state[f"ui_salud_{q_name}_{i}"] = str(row_o.get("Estatus_Salud", "🟢 En Tiempo"))
             
             if not df_crit.empty and 'OKR_ID' in df_crit.columns:
                 if 'Trimestre_ID' in df_crit.columns:
@@ -375,9 +375,9 @@ cargar_datos()
 # --- OPTIMIZACION DE GUARDADO RÁPIDO ---
 def guardar_en_bd():
     kpis_data, okrs_data, crit_data, tareas_data = [], [], [], []
-    peso_k, peso_o = float(st.session_state.get("data_p_kpis", 50.0)), float(st.session_state.get("data_p_okrs", 50.0))
+    peso_k, peso_o = float(st.session_state.get("ui_p_kpis", 50.0)), float(st.session_state.get("ui_p_okrs", 50.0))
     v_sob, v_meta, v_med = float(st.session_state.get("cfg_sob", 100.0)), float(st.session_state.get("cfg_meta", 90.0)), float(st.session_state.get("cfg_med", 89.0))
-    emp, due, pue = st.session_state.get("data_empresa", ""), st.session_state.get("data_dueno", ""), st.session_state.get("data_puesto", "")
+    emp, due, pue = st.session_state.get("ui_empresa", ""), st.session_state.get("ui_dueno", ""), st.session_state.get("ui_puesto", "")
     logo_c = st.session_state.get("logo_input", "")
 
     cols_kpi = ["onetrack_id", "Empresa", "Puesto", "Dueno", "Logo_Cliente", "KPI_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%", "Peso_Global_KPI", "Peso_Global_OKR", "U_SVerde", "U_Verde", "U_Amarillo"]
@@ -395,7 +395,7 @@ def guardar_en_bd():
     df_kpi_master = st.session_state.get("df_kpi_Q1", pd.DataFrame())
     if not df_kpi_master.empty:
         for idx, r in df_kpi_master.iterrows():
-            k_nom = str(r.get("KPIs Indicadores", "")).strip()
+            k_nom = str(r.get("Indicadores Clave de Desempeño (KPIs)", "")).strip()
             if k_nom:
                 row = {
                     "onetrack_id": token, "Empresa": emp, "Puesto": pue, "Dueno": due, "Logo_Cliente": logo_c,
@@ -405,12 +405,12 @@ def guardar_en_bd():
                 }
                 for q_n, meses in trimestres.items():
                     df_q = st.session_state[f"df_kpi_{q_n}"]
-                    if idx in df_q.index and str(df_q.loc[idx, "KPIs Indicadores"]).strip() == k_nom:
+                    if idx in df_q.index and str(df_q.loc[idx, "Indicadores Clave de Desempeño (KPIs)"]).strip() == k_nom:
                         for m in meses:
                             row[f"{m}_P"] = df_q.loc[idx, f"{m} Prog"]
                             row[f"{m}_R"] = df_q.loc[idx, f"{m} Real"]
                     else:
-                        matches = df_q[df_q["KPIs Indicadores"] == k_nom]
+                        matches = df_q[df_q["Indicadores Clave de Desempeño (KPIs)"] == k_nom]
                         if not matches.empty:
                             m_idx = matches.index[0]
                             for m in meses:
@@ -422,9 +422,9 @@ def guardar_en_bd():
 
     for q_n in trimestres.keys():
         for i in range(1, st.session_state.get(f"num_iniciativas_{q_n}", 1) + 1):
-            o_nom = st.session_state.get(f"data_nom_{q_n}_{i}", "")
+            o_nom = st.session_state.get(f"ui_nom_{q_n}_{i}", "")
             if o_nom:
-                okrs_data.append({"onetrack_id": token, "Trimestre_ID": q_n, "OKR_ID": i, "OKR_Nombre": o_nom, "Objetivo": st.session_state.get(f"data_obj_{q_n}_{i}", ""), "Peso_%": float(st.session_state.get(f"data_peso_{q_n}_{i}", 20.0)), "Estatus_Salud": st.session_state.get(f"data_salud_{q_n}_{i}", "🟢 En Tiempo")})
+                okrs_data.append({"onetrack_id": token, "Trimestre_ID": q_n, "OKR_ID": i, "OKR_Nombre": o_nom, "Objetivo": st.session_state.get(f"ui_obj_{q_n}_{i}", ""), "Peso_%": float(st.session_state.get(f"ui_peso_{q_n}_{i}", 20.0)), "Estatus_Salud": st.session_state.get(f"ui_salud_{q_n}_{i}", "🟢 En Tiempo")})
                 
                 df_c = st.session_state.get(f"df_crit_{q_n}_{i}", pd.DataFrame())
                 if not df_c.empty:
@@ -492,16 +492,16 @@ with c_img3:
 c_inf1, c_inf2, c_inf3 = st.columns(3)
 with c_inf1:
     st.markdown("<div class='custom-label'>EMPRESA</div>", unsafe_allow_html=True)
-    n_emp = st.text_input("Empresa", value=st.session_state.get("data_empresa", ""), key="ui_empresa", label_visibility="collapsed")
-    st.session_state["data_empresa"] = n_emp
+    v_emp = st.session_state.get("ui_empresa", "")
+    st.session_state.empresa_input = st.text_input("Empresa", value=v_emp, key="ui_empresa", label_visibility="collapsed")
 with c_inf2:
     st.markdown("<div class='custom-label'>NOMBRE (DUEÑO DEL ONE TRACK)</div>", unsafe_allow_html=True)
-    n_due = st.text_input("Dueño", value=st.session_state.get("data_dueno", ""), key="ui_dueno", label_visibility="collapsed")
-    st.session_state["data_dueno"] = n_due
+    v_due = st.session_state.get("ui_dueno", "")
+    st.session_state.dueno_input = st.text_input("Dueño", value=v_due, key="ui_dueno", label_visibility="collapsed")
 with c_inf3:
     st.markdown("<div class='custom-label'>PUESTO</div>", unsafe_allow_html=True)
-    n_pue = st.text_input("Puesto", value=st.session_state.get("data_puesto", ""), key="ui_puesto", label_visibility="collapsed")
-    st.session_state["data_puesto"] = n_pue
+    v_pue = st.session_state.get("ui_puesto", "")
+    st.session_state.puesto_input = st.text_input("Puesto", value=v_pue, key="ui_puesto", label_visibility="collapsed")
 
 st.divider()
 
@@ -516,19 +516,27 @@ with col_btn:
         st.success("Guardado exitoso.")
 st.write("")
 
+# TARJETA INFORMATIVA NUEVA
+st.markdown("""
+<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); border-left: 5px solid #002060; margin-bottom: 20px;'>
+    <p style='margin: 0; color: #4b5563; font-size: 15px;'>
+        <strong style='color:#002060;'>Indicadores Clave de Desempeño (KPIs)</strong> &rarr; miden el resultado/desempeño.<br>
+        <strong style='color:#002060;'>Iniciativas Estratégicas</strong> &rarr; miden la ejecución para mover esos resultados.
+    </p>
+</div>
+""", unsafe_allow_html=True)
+
 # TARJETAS FRONTALES PONDERACION Y RESULTADOS
 col_w, col_s1, col_s2, col_s3 = st.columns([1.5, 1, 1, 1])
 with col_w:
     st.markdown("<div class='summary-card' style='padding:15px;'><p class='summary-title'>Ponderación Global</p>", unsafe_allow_html=True)
     c_kpi, c_okr = st.columns(2)
     with c_kpi:
-        st.markdown("<div class='custom-label'>INDICADORES (%)</div>", unsafe_allow_html=True)
-        n_pk = st.number_input("Ind", value=float(st.session_state.get("data_p_kpis", 50.0)), key="ui_p_kpis", label_visibility="collapsed")
-        st.session_state["data_p_kpis"] = n_pk
+        st.markdown("<div class='custom-label'>INDICADORES CLAVE DE DESEMPEÑO (KPIs) (%)</div>", unsafe_allow_html=True)
+        st.number_input("Ind", key="ui_p_kpis", label_visibility="collapsed")
     with c_okr:
         st.markdown("<div class='custom-label'>INICIATIVAS (%)</div>", unsafe_allow_html=True)
-        n_po = st.number_input("Ini", value=float(st.session_state.get("data_p_okrs", 50.0)), key="ui_p_okrs", label_visibility="collapsed")
-        st.session_state["data_p_okrs"] = n_po
+        st.number_input("Ini", key="ui_p_okrs", label_visibility="collapsed")
     st.markdown("</div>", unsafe_allow_html=True)
 
 # --- VISTAS NAVEGABLES ---
@@ -538,7 +546,7 @@ if st.session_state.vista_actual in trimestres.keys():
     
     for i in range(1, st.session_state.get(f"num_iniciativas_{q_name}", 1) + 1): init_okr_structure(q_name, i, meses_q)
     
-    st.markdown(f"<div class='section-title'>KPIs Indicadores - {q_name}</div>", unsafe_allow_html=True)
+    st.markdown(f"<div class='section-title'>Indicadores Clave de Desempeño (KPIs) - {q_name}</div>", unsafe_allow_html=True)
     render_footer(st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame()), meses_q)
     
     st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
@@ -601,28 +609,19 @@ if st.session_state.vista_actual in trimestres.keys():
         ch1, ch2, ch3 = st.columns([3, 1, 1])
         with ch1:
             st.markdown("<div class='custom-label'>NOMBRE DE LA INICIATIVA</div>", unsafe_allow_html=True)
-            v_nom = st.session_state.get(f"data_nom_{q_name}_{i}", "")
-            n_nom = st.text_input("Nombre", value=v_nom, key=f"ui_nom_{q_name}_{i}", label_visibility="collapsed")
-            st.session_state[f"data_nom_{q_name}_{i}"] = n_nom
+            st.text_input("Nombre", key=f"ui_nom_{q_name}_{i}", label_visibility="collapsed")
         
         with ch2:
             st.markdown("<div class='custom-label'>PONDERACIÓN (%)</div>", unsafe_allow_html=True)
-            v_peso = float(st.session_state.get(f"data_peso_{q_name}_{i}", 20.0))
-            n_peso = st.number_input("Peso", value=v_peso, key=f"ui_peso_{q_name}_{i}", label_visibility="collapsed")
-            st.session_state[f"data_peso_{q_name}_{i}"] = n_peso
+            st.number_input("Peso", key=f"ui_peso_{q_name}_{i}", label_visibility="collapsed")
         
         with ch3:
             opciones_salud = ["🟢 En Tiempo", "🟡 En Riesgo", "🔴 Retrasado"]
-            v_salud = st.session_state.get(f"data_salud_{q_name}_{i}", "🟢 En Tiempo")
-            if v_salud not in opciones_salud: v_salud = "🟢 En Tiempo"
             st.markdown("<div class='custom-label'>ESTATUS ACTUAL</div>", unsafe_allow_html=True)
-            n_salud = st.selectbox("Salud", options=opciones_salud, index=opciones_salud.index(v_salud), key=f"ui_salud_{q_name}_{i}", label_visibility="collapsed")
-            st.session_state[f"data_salud_{q_name}_{i}"] = n_salud
+            st.selectbox("Salud", options=opciones_salud, key=f"ui_salud_{q_name}_{i}", label_visibility="collapsed")
         
         st.markdown("<div class='custom-label'>OBJETIVO</div>", unsafe_allow_html=True)
-        v_obj = st.session_state.get(f"data_obj_{q_name}_{i}", "")
-        n_obj = st.text_area("Obj", value=v_obj, key=f"ui_obj_{q_name}_{i}", height=80, label_visibility="collapsed")
-        st.session_state[f"data_obj_{q_name}_{i}"] = n_obj
+        st.text_area("Obj", key=f"ui_obj_{q_name}_{i}", height=80, label_visibility="collapsed")
         
         st.markdown("<div class='sub-section-title'>Criterios de Éxito (Medición)</div>", unsafe_allow_html=True)
         st.session_state[f"df_crit_{q_name}_{i}"] = st.data_editor(
@@ -658,11 +657,11 @@ if st.session_state.vista_actual in trimestres.keys():
 elif st.session_state.vista_actual == "Configuración de Cuenta":
     st.markdown("<div class='section-title'>Configuración de Cuenta</div>", unsafe_allow_html=True)
     
-    st.markdown("<div class='sub-section-title'>Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
-    st.info("Presiona este botón para llenar tu tablero actual con datos de ejemplo matemáticamente perfectos. Luego ve a cualquier pestaña y presiona 'Guardar Cambios' para enviarlos a tu base de datos.")
-    if st.button("Llenar tablero con datos Dummy", type="secondary"):
-        generar_dummy_onetest()
-        st.rerun()
+    # st.markdown("<div class='sub-section-title'>Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
+    # st.info("Presiona este botón para llenar tu tablero actual con datos de ejemplo matemáticamente perfectos. Luego ve a cualquier pestaña y presiona 'Guardar Cambios' para enviarlos a tu base de datos.")
+    # if st.button("Llenar tablero con datos Dummy", type="secondary"):
+    #     generar_dummy_onetest()
+    #     st.rerun()
         
     st.markdown("<br><div class='sub-section-title'>Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
@@ -682,7 +681,7 @@ def get_mes_cump(m, q_name):
     df_kpi = st.session_state.get(f"df_kpi_{q_name}", pd.DataFrame())
     if not df_kpi.empty:
         for i in range(len(df_kpi)):
-            if str(df_kpi["KPIs Indicadores"].iloc[i]).strip():
+            if str(df_kpi["Indicadores Clave de Desempeño (KPIs)"].iloc[i]).strip():
                 p = float(df_kpi[f"{m} Prog"].iloc[i] or 0)
                 r = float(df_kpi[f"{m} Real"].iloc[i] or 0)
                 peso = float(df_kpi["Peso %"].iloc[i] or 0)
@@ -692,8 +691,8 @@ def get_mes_cump(m, q_name):
 
     t_peso_o, acum_o = 0.0, 0.0
     for i in range(1, st.session_state.get(f"num_iniciativas_{q_name}", 1) + 1):
-        if str(st.session_state.get(f"data_nom_{q_name}_{i}", "")).strip():
-            peso_o = float(st.session_state.get(f"data_peso_{q_name}_{i}", 0.0))
+        if str(st.session_state.get(f"ui_nom_{q_name}_{i}", "")).strip():
+            peso_o = float(st.session_state.get(f"ui_peso_{q_name}_{i}", 0.0))
             df_c = st.session_state.get(f"df_crit_{q_name}_{i}", pd.DataFrame())
             p_t, r_t = 0.0, 0.0
             has_crit = False
@@ -716,8 +715,8 @@ def get_mes_cump(m, q_name):
             acum_o += cump_o_ini * (peso_o / 100.0); t_peso_o += peso_o
     res_o = (acum_o / (t_peso_o / 100.0)) if t_peso_o > 0 else 0.0
 
-    t_peso_tot = float(st.session_state.get("data_p_kpis", 50.0)) + float(st.session_state.get("data_p_okrs", 50.0))
-    res_tot = ((res_k * (float(st.session_state.get("data_p_kpis", 50.0)) / 100.0)) + (res_o * (float(st.session_state.get("data_p_okrs", 50.0)) / 100.0))) / (t_peso_tot / 100.0) if t_peso_tot > 0 else 0.0
+    t_peso_tot = float(st.session_state.get("ui_p_kpis", 50.0)) + float(st.session_state.get("ui_p_okrs", 50.0))
+    res_tot = ((res_k * (float(st.session_state.get("ui_p_kpis", 50.0)) / 100.0)) + (res_o * (float(st.session_state.get("ui_p_okrs", 50.0)) / 100.0))) / (t_peso_tot / 100.0) if t_peso_tot > 0 else 0.0
     return res_k, res_o, res_tot
 
 anual_data, line_mensual = [], []
@@ -725,8 +724,8 @@ for q, meses in trimestres.items():
     acum_k_q, acum_o_q, acum_tot_q = 0.0, 0.0, 0.0
     for m in meses:
         rk, ro, rtot = get_mes_cump(m, q)
-        anual_data.append({"Mes": m, "KPIs": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
-        line_mensual.extend([{"Mes": m, "Tipo": "KPIs", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
+        anual_data.append({"Mes": m, "Indicadores Clave de Desempeño (KPIs)": rk/100.0, "Iniciativas": ro/100.0, "Integrado": rtot/100.0, "Trimestre": q, "Resultado Q": None})
+        line_mensual.extend([{"Mes": m, "Tipo": "Indicadores Clave de Desempeño (KPIs)", "Valor": rk}, {"Mes": m, "Tipo": "Iniciativas Estratégicas", "Valor": ro}, {"Mes": m, "Tipo": "Desempeño Integrado", "Valor": rtot}])
         acum_k_q += rk; acum_o_q += ro; acum_tot_q += rtot
     anual_data[-1]["Resultado Q"] = (acum_tot_q / 3.0) / 100.0
 
@@ -736,14 +735,14 @@ df_anual = pd.DataFrame(anual_data)
 if st.session_state.vista_actual in trimestres.keys():
     q_sel = st.session_state.vista_actual
     df_q = df_anual[df_anual["Trimestre"] == q_sel]
-    res_k_total = df_q["KPIs"].mean() * 100
+    res_k_total = df_q["Indicadores Clave de Desempeño (KPIs)"].mean() * 100
     res_o_total = df_q["Iniciativas"].mean() * 100
     res_tot_final = df_q["Integrado"].mean() * 100
-    l_kpi, l_okr, l_tot = f"Indicadores ({q_sel})", f"Iniciativas ({q_sel})", f"Total ONE TRACK ({q_sel})"
+    l_kpi, l_okr, l_tot = f"Indicadores Clave de Desempeño (KPIs) ({q_sel})", f"Iniciativas ({q_sel})", f"Total ONE TRACK ({q_sel})"
 else:
-    res_k_total, res_o_total = df_anual["KPIs"].mean() * 100, df_anual["Iniciativas"].mean() * 100
+    res_k_total, res_o_total = df_anual["Indicadores Clave de Desempeño (KPIs)"].mean() * 100, df_anual["Iniciativas"].mean() * 100
     res_tot_final = df_anual["Integrado"].mean() * 100
-    l_kpi, l_okr, l_tot = "Indicadores (Anual)", "Iniciativas (Anual)", "Total ONE TRACK (Anual)"
+    l_kpi, l_okr, l_tot = "Indicadores Clave de Desempeño (KPIs) (Anual)", "Iniciativas (Anual)", "Total ONE TRACK (Anual)"
 
 v_sob, v_meta, v_med = float(st.session_state.get("cfg_sob", 100.0)), float(st.session_state.get("cfg_meta", 90.0)), float(st.session_state.get("cfg_med", 89.0))
 c_kpi, c_okr, c_tot = ob_color(res_k_total, v_sob, v_meta, v_med), ob_color(res_o_total, v_sob, v_meta, v_med), ob_color(res_tot_final, v_sob, v_meta, v_med)
@@ -783,7 +782,7 @@ if st.session_state.vista_actual == "Resumen Anual":
     with col_ta:
         st.markdown("<div class='sub-section-title'>Desempeño Mensual y Trimestral</div>", unsafe_allow_html=True)
         st.markdown("<div style='background-color:#ffffff; padding:15px; border-radius:10px; box-shadow: 0 4px 6px rgba(0,0,0,0.02);'>", unsafe_allow_html=True)
-        st.dataframe(df_anual.style.format({"KPIs": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), use_container_width=True, hide_index=True)
+        st.dataframe(df_anual.style.format({"Indicadores Clave de Desempeño (KPIs)": "{:.0%}", "Iniciativas": "{:.0%}", "Integrado": "{:.0%}", "Resultado Q": "{:.0%}"}), use_container_width=True, hide_index=True)
         st.markdown("</div>", unsafe_allow_html=True)
     
     with col_ch:
@@ -805,7 +804,7 @@ if st.session_state.vista_actual == "Resumen Anual":
     ch_m = alt.Chart(df_m).mark_line(point=True, strokeWidth=3).encode(
         x=alt.X('Mes', sort=meses_totales, title='', axis=alt.Axis(labelFontWeight="bold")),
         y=alt.Y('Valor', title='', scale=alt.Scale(domain=[0, 120]), axis=alt.Axis(gridColor="#f0f2f6")),
-        color=alt.Color('Tipo', scale=alt.Scale(domain=['KPIs', 'Iniciativas Estratégicas', 'Desempeño Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
+        color=alt.Color('Tipo', scale=alt.Scale(domain=['Indicadores Clave de Desempeño (KPIs)', 'Iniciativas Estratégicas', 'Desempeño Integrado'], range=['#002060', '#4B8BBE', '#808080']), legend=alt.Legend(title="", orient='bottom', labelFontWeight="bold")),
         tooltip=['Mes', 'Tipo', 'Valor']
     ).properties(height=350)
     st.altair_chart(ch_m, use_container_width=True)
