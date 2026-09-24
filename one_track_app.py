@@ -244,12 +244,10 @@ def dibujar_gantt(df_tareas):
     df_plot = df_plot.dropna(subset=["Inicio", "Fin"])
     if df_plot.empty: return
     
-    # Ordenar por Jerarquia para agrupar visualmente padres e hijos
     df_plot = df_plot.sort_values(by="Jerarquia")
     df_plot['Nombre'] = df_plot['Jerarquia'] + " " + df_plot['Tarea']
     df_plot['Estado'] = df_plot['Completado'].apply(lambda x: "Realizado" if x else "Pendiente")
     
-    # Renderizamos manteniendo el orden del sort con el eje Y
     chart = alt.Chart(df_plot).mark_bar(cornerRadius=4, size=20).encode(
         x=alt.X('Inicio', title='', axis=alt.Axis(format="%d %b", grid=True, gridColor="#f0f2f6")), x2='Fin',
         y=alt.Y('Nombre', sort=df_plot['Nombre'].tolist(), title='', axis=alt.Axis(labelFontWeight="bold", labelLimit=300)),
@@ -587,7 +585,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
                 tot_t = len(t_validas)
                 comp = t_validas["Completado"].sum() if tot_t > 0 else 0
                 
-                # Obtener la duración de la iniciativa (min inicio - max fin)
+                # Obtener la duración de la iniciativa
                 df_t_fechas = t_validas.copy()
                 df_t_fechas['Inicio'] = pd.to_datetime(df_t_fechas['Inicio'], errors='coerce')
                 df_t_fechas['Fin'] = pd.to_datetime(df_t_fechas['Fin'], errors='coerce')
