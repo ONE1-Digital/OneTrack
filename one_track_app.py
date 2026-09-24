@@ -73,6 +73,22 @@ def init_db():
 
 init_db()
 
+# --- FUNCIONES MATEMATICAS Y COLORES ---
+def calc_cump(prog, real, menor_mejor="NO"):
+    if prog == 0 and real == 0: return 0.0
+    if menor_mejor == "SI": return (prog / real * 100) if real > 0 else 100.0
+    else: return (real / prog * 100) if prog > 0 else (100.0 if real > 0 else 0.0)
+
+def ob_color(val, sob, meta, med):
+    if val >= sob: return "#00b050" 
+    elif val >= meta: return "#92d050" 
+    elif val > med: return "#ffff00" 
+    else: return "#ff0000" 
+
+def format_date_spanish(d):
+    meses_abrev = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"]
+    return f"{d.day} {meses_abrev[d.month-1]}"
+
 # --- FUNCION DUMMY MEJORADA MATEMATICAMENTE ---
 def generar_dummy_onetest():
     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
@@ -86,7 +102,6 @@ def generar_dummy_onetest():
 
     # --- Q1 (1 Iniciativa 100%) ---
     q_n = "Q1"; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    
     st.session_state[f"ui_nom_{q_n}_1"] = "Expansión de Mercado Norte"
     st.session_state[f"ui_peso_{q_n}_1"] = 100.0
     st.session_state[f"ui_obj_{q_n}_1"] = "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales."
@@ -103,8 +118,7 @@ def generar_dummy_onetest():
 
     # --- Q2 (2 Iniciativas: 60% y 40%) ---
     q_n = "Q2"; st.session_state[f"num_iniciativas_{q_n}"] = 2
-    
-    # Iniciativa 1 (Q2)
+    # Iniciativa 1
     st.session_state[f"ui_nom_{q_n}_1"] = "Lanzamiento de Nuevo Producto"
     st.session_state[f"ui_peso_{q_n}_1"] = 60.0
     st.session_state[f"ui_obj_{q_n}_1"] = "Lanzar producto Alpha antes del cierre de semestre."
@@ -118,7 +132,7 @@ def generar_dummy_onetest():
     df_t1.loc[3] = ["3.", "Campaña de Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False]
     st.session_state[f"df_tareas_{q_n}_1"] = df_t1
 
-    # Iniciativa 2 (Q2)
+    # Iniciativa 2
     st.session_state[f"ui_nom_{q_n}_2"] = "Optimización de Costos Operativos"
     st.session_state[f"ui_peso_{q_n}_2"] = 40.0
     st.session_state[f"ui_obj_{q_n}_2"] = "Reducir costos operativos en logística."
@@ -134,7 +148,6 @@ def generar_dummy_onetest():
 
     # --- Q3 (1 Iniciativa 100%) ---
     q_n = "Q3"; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    
     st.session_state[f"ui_nom_{q_n}_1"] = "Certificación ISO 9001"
     st.session_state[f"ui_peso_{q_n}_1"] = 100.0
     st.session_state[f"ui_obj_{q_n}_1"] = "Obtener certificación en procesos clave."
@@ -150,7 +163,6 @@ def generar_dummy_onetest():
 
     # --- Q4 (1 Iniciativa 100%) ---
     q_n = "Q4"; st.session_state[f"num_iniciativas_{q_n}"] = 1
-    
     st.session_state[f"ui_nom_{q_n}_1"] = "Cierre de Año y Planificación 2027"
     st.session_state[f"ui_peso_{q_n}_1"] = 100.0
     st.session_state[f"ui_obj_{q_n}_1"] = "Cerrar métricas anuales y planear presupuesto 2027."
@@ -205,18 +217,6 @@ if st.session_state.user_info['role'] == 'admin':
 
 # --- CONSTANTES CLIENTE ---
 token = st.session_state.user_info['username']
-
-# --- FUNCIONES MATEMATICAS Y COLORES ---
-def calc_cump(prog, real, menor_mejor="NO"):
-    if prog == 0 and real == 0: return 0.0
-    if menor_mejor == "SI": return (prog / real * 100) if real > 0 else 100.0
-    else: return (real / prog * 100) if prog > 0 else (100.0 if real > 0 else 0.0)
-
-def ob_color(val, sob, meta, med):
-    if val >= sob: return "#00b050" 
-    elif val >= meta: return "#92d050" 
-    elif val > med: return "#ffff00" 
-    else: return "#ff0000" 
 
 def render_footer(df, meses):
     html_footer = "<div style='display:flex; justify-content:flex-start; gap:12px; margin-bottom: 20px; align-items:center;'><div style='font-weight:900; color:#002060; font-size:15px; text-transform:uppercase;'>Avance Mensual:</div>"
@@ -327,7 +327,7 @@ def cargar_datos():
             if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
                 q_okrs_db = df_okrs[df_okrs['Trimestre_ID'] == q_name] if 'Trimestre_ID' in df_okrs.columns else df_okrs
                 match_okr = q_okrs_db[pd.to_numeric(q_okrs_db['OKR_ID']) == i]
-                if not es_nuevo and not match_okr.empty:
+                if not match_okr.empty:
                     row_o = match_okr.iloc[0]
                     st.session_state[f"ui_nom_{q_name}_{i}"] = str(row_o.get("OKR_Nombre", ""))
                     st.session_state[f"ui_obj_{q_name}_{i}"] = str(row_o.get("Objetivo", ""))
@@ -502,7 +502,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     st.markdown("<div class='sub-section-title'>2. Iniciativas Estratégicas y Output</div>", unsafe_allow_html=True)
     st.write("Cada trimestre puedes tener múltiples iniciativas que te ayudarán a lograr tus KPIs.")
     st.markdown("- **Output de la Iniciativa:** Define qué entregable exacto producirá esta iniciativa (Ej. 'Sucursales abiertas'). Establece una Meta numérica y registra lo Realizado para evaluar su éxito final.")
-    st.markdown("- **Estatus Actual:** Ya no necesitas cambiarlo manualmente. La plataforma calcula si la iniciativa está 🟢 Completada, 🟢 En Tiempo, 🟡 En Riesgo o 🔴 Retrasada dependiendo de las tareas que marques como completadas en el Gantt.")
+    st.markdown("- **Estatus Actual:** El sistema calcula si la iniciativa está 🟢 Completada, 🟢 En Tiempo, 🟡 En Riesgo o 🔴 Retrasada dependiendo exclusivamente de las tareas que marques como completadas en el Gantt.")
     st.markdown("<div class='img-placeholder' style='height: 200px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Tarjeta de Iniciativa y Output ]</div>", unsafe_allow_html=True)
     
     # 3. Plan de Tareas (Gantt)
@@ -577,13 +577,27 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
         for i in range(1, st.session_state.get(f"num_iniciativas_{q_name}", 1) + 1):
             st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
             
-            # --- CALCULO AVANCE (SOLO TAREAS) ---
+            # --- CALCULO AVANCE (SOLO TAREAS) Y RANGO DE FECHAS ---
             df_t_prog = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
             tot_t, comp = 0, 0
+            fecha_texto = ""
+            
             if not df_t_prog.empty:
                 t_validas = df_t_prog[df_t_prog["Tarea"].str.strip() != ""]
                 tot_t = len(t_validas)
                 comp = t_validas["Completado"].sum() if tot_t > 0 else 0
+                
+                # Obtener la duración de la iniciativa (min inicio - max fin)
+                df_t_fechas = t_validas.copy()
+                df_t_fechas['Inicio'] = pd.to_datetime(df_t_fechas['Inicio'], errors='coerce')
+                df_t_fechas['Fin'] = pd.to_datetime(df_t_fechas['Fin'], errors='coerce')
+                df_valid_dates = df_t_fechas.dropna(subset=['Inicio', 'Fin'])
+                
+                if not df_valid_dates.empty:
+                    min_d = df_valid_dates['Inicio'].min()
+                    max_d = df_valid_dates['Fin'].max()
+                    if pd.notnull(min_d) and pd.notnull(max_d):
+                        fecha_texto = f" <span style='font-size:14px; font-weight:normal; color:#cbd5e1; margin-left:12px;'>🗓️ {format_date_spanish(min_d)} - {format_date_spanish(max_d)}</span>"
             
             cump_tareas = (comp / tot_t * 100.0) if tot_t > 0 else 0.0
             avance_ini = cump_tareas
@@ -605,12 +619,12 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             
             st.session_state[f"ui_salud_{q_name}_{i}"] = estatus_calc
 
-            h_col1, h_col2 = st.columns([1, 2.5])
-            with h_col1: st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
+            h_col1, h_col2 = st.columns([1.5, 2])
+            with h_col1: st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}{fecha_texto}</div>", unsafe_allow_html=True)
             with h_col2: 
                 st.markdown(f"""
                 <div style='display:flex; gap:10px; justify-content: flex-end;'>
-                    <div style='background:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius:6px; font-weight:900; font-size:14px; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>AVANCE INTEGRADO: {avance_ini:.1f}%</div>
+                    <div style='background:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius:6px; font-weight:900; font-size:14px; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>CUMPLIMIENTO DE PLAN DE ACCIÓN: {avance_ini:.1f}%</div>
                 </div>
                 """, unsafe_allow_html=True)
             
@@ -625,7 +639,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             
             with ch3:
                 st.markdown("<div class='custom-label'>ESTATUS ACTUAL</div>", unsafe_allow_html=True)
-                st.markdown(f"<div style='background-color:#ffffff; padding: 8px 12px; border-radius:6px; border: 1px solid #cbd5e1; font-weight: bold; color: #4b5563; font-size:14px;'>{estatus_calc}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background-color:#ffffff; padding: 8px 12px; border-radius:6px; border: 1px solid #cbd5e1; font-weight: bold; color: #4b5563; font-size:14px; text-align:center;'>{estatus_calc}</div>", unsafe_allow_html=True)
             
             st.markdown("<div class='custom-label'>OBJETIVO</div>", unsafe_allow_html=True)
             st.text_area("Obj", key=f"ui_obj_{q_name}_{i}", height=80, label_visibility="collapsed")
