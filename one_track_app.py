@@ -126,7 +126,7 @@ def update_avance_resultados(df):
             df.at[idx, "Avance %"] = 0.0
     return df
 
-# --- FUNCION DUMMY QUE SERÁ LLAMADA POR CALLBACK ---
+# --- FUNCION DUMMY MEJORADA CON ESTRUCTURA EXACTA ---
 def generar_dummy_onetest():
     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
     cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
@@ -218,6 +218,17 @@ def generar_dummy_onetest():
     df_t4.loc[2] = ["2.", "Definición Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
     df_t4.loc[3] = ["3.", "Presentación Ejecutiva", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
     st.session_state[f"df_tareas_{q_n}_1"] = update_estatus_tareas(df_t4)
+
+# --- CALLBACK DE LIMPIEZA TOTAL ---
+def ejecutar_dummy_callback():
+    # Limpiar cualquier memoria caché de las tablas interactivas para forzar renderizado limpio
+    for key in list(st.session_state.keys()):
+        if key.startswith("ed_") or "loaded" in key:
+            del st.session_state[key]
+            
+    generar_dummy_onetest()
+    guardar_en_bd()
+    st.session_state.datos_cargados = False
 
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -505,12 +516,6 @@ def guardar_en_bd():
     sync_tabla(df_outputs, "iniciativas_outputs")
     sync_tabla(df_tareas, "iniciativas_tareas")
 
-# --- FUNCION DE CALLBACK PARA EJECUTAR DUMMY SIN ERRORES ---
-def ejecutar_dummy_callback():
-    generar_dummy_onetest()
-    guardar_en_bd()
-    st.session_state.datos_cargados = False
-
 # --- BARRA LATERAL (NAVEGACION DE PESTAÑAS) ---
 if 'vista_actual' not in st.session_state: st.session_state.vista_actual = "Q1"
 
@@ -592,12 +597,6 @@ if st.session_state.vista_actual == "Guía de Uso":
     st.markdown("- Ve al final de la página del trimestre y usa los botones **➕ Añadir Iniciativa** o **🗑️ Quitar Iniciativa**.")
     st.markdown("- *Nota:* Recuerda que las iniciativas de cada trimestre (Q1, Q2, etc.) son 100% independientes unas de otras.")
     st.markdown("<div class='img-placeholder' style='height: 150px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Botones de Añadir/Quitar Iniciativa ]</div>", unsafe_allow_html=True)
-    
-    st.markdown("<div class='sub-section-title'>5. Modificar Semáforos (Resumen Anual)</div>", unsafe_allow_html=True)
-    st.write("Personaliza los colores de rendimiento de todo tu ONE TRACK.")
-    st.markdown("- Ve a la pestaña **Resumen Anual** y despliega la opción **⚙️ Configuración de Semáforos**.")
-    st.markdown("- Ajusta los porcentajes. Por ejemplo, si configuras 'Meta' en 90%, cualquier desempeño superior al 90% se pintará de verde en todo el tablero.")
-    st.markdown("<div class='img-placeholder' style='height: 200px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Panel de configuración de semáforos ]</div>", unsafe_allow_html=True)
 
 elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vista_actual == "Resumen Anual":
     
@@ -901,7 +900,7 @@ elif st.session_state.vista_actual == "Configuración de ONE Track":
     st.markdown("<br><div class='sub-section-title'>🛠️ Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
     st.info("Presiona este botón para llenar tu tablero actual con datos de ejemplo matemáticamente perfectos. Luego ve a cualquier pestaña y presiona 'Guardar Cambios' para enviarlos a tu base de datos.")
     
-    # El callback en el botón asegura que las variables se modifiquen antes de dibujarse
+    # Botón con la función de limpieza de caché incluida (Callback)
     if st.button("Llenar tablero con datos Dummy", type="secondary", on_click=ejecutar_dummy_callback):
         st.success("¡Datos generados y guardados con éxito!")
         
