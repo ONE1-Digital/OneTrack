@@ -33,10 +33,10 @@ st.markdown("""
         background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important;
     }
 
-    /* Tarjetas y Estructura Iniciativas */
-    .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 100%; }
+    /* Tarjetas y Estructura Iniciativas (ALTURA FIJA Y CENTRADA) */
+    .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 130px; display: flex; flex-direction: column; justify-content: center; align-items: center;}
     .summary-title { font-size: 14px; color: #4b5563; font-weight: 900; margin-bottom: 5px; text-transform: uppercase;}
-    .summary-value { font-size: 28px; color: #002060; font-weight: 900; }
+    .summary-value { font-size: 28px; color: #002060; font-weight: 900; margin: 0;}
     
     .iniciativa-box { padding: 5px 0; margin-bottom: 10px; }
     .iniciativa-header { font-size: 20px; font-weight: 900; color: #ffffff; background-color: #002060; padding: 10px 20px; border-radius: 8px; display: inline-block; margin-bottom: 15px;}
@@ -132,11 +132,27 @@ def update_estatus_tareas(df):
                 df.at[idx, "Estatus"] = "⚪ Pendiente"
     return df
 
+def update_avance_resultados(df):
+    if df.empty: return df
+    if "Avance %" not in df.columns: df["Avance %"] = 0.0
+    for idx, row in df.iterrows():
+        if str(row.get("Nombre", "")).strip() != "":
+            try:
+                meta = float(row.get("Meta", 0.0))
+                real = float(row.get("Real", 0.0))
+                menor = str(row.get("< Mejor", "NO"))
+                df.at[idx, "Avance %"] = calc_cump(meta, real, menor)
+            except:
+                df.at[idx, "Avance %"] = 0.0
+        else:
+            df.at[idx, "Avance %"] = 0.0
+    return df
+
 # --- FUNCION DUMMY ESTRUCTURADA PARA LA BÓVEDA ---
 def generar_dummy_onetest():
     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
     cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
-    cols_out = ["Objetivo / Entregable", "Meta", "Realizado"]
+    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
 
     st.session_state.db["p_kpis"] = 50.0
     st.session_state.db["p_okrs"] = 50.0
@@ -154,8 +170,8 @@ def generar_dummy_onetest():
     st.session_state.db[f"obj_{q_n}_1"] = "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales."
     
     df_o = pd.DataFrame(columns=cols_out)
-    df_o.loc[1] = ["Abrir sucursales físicas", 3.0, 2.0]
-    st.session_state[f"df_outputs_{q_n}_1"] = df_o
+    df_o.loc[1] = ["Abrir sucursales físicas", "U", "NO", 3.0, 2.0, 0.0]
+    st.session_state[f"df_outputs_{q_n}_1"] = update_avance_resultados(df_o)
     
     df_t = pd.DataFrame(columns=cols_t)
     df_t.loc[1] = ["1.", "Investigación de Mercado", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
@@ -170,8 +186,8 @@ def generar_dummy_onetest():
     st.session_state.db[f"peso_{q_n}_1"] = 60.0
     st.session_state.db[f"obj_{q_n}_1"] = "Lanzar producto Alpha antes del cierre de semestre."
     df_o1 = pd.DataFrame(columns=cols_out)
-    df_o1.loc[1] = ["Prototipos validados", 5.0, 5.0]
-    st.session_state[f"df_outputs_{q_n}_1"] = df_o1
+    df_o1.loc[1] = ["Prototipos validados", "U", "NO", 5.0, 5.0, 0.0]
+    st.session_state[f"df_outputs_{q_n}_1"] = update_avance_resultados(df_o1)
     
     df_t1 = pd.DataFrame(columns=cols_t)
     df_t1.loc[1] = ["1.", "Diseño de Prototipo", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
@@ -183,8 +199,8 @@ def generar_dummy_onetest():
     st.session_state.db[f"peso_{q_n}_2"] = 40.0
     st.session_state.db[f"obj_{q_n}_2"] = "Reducir costos operativos en logística."
     df_o2 = pd.DataFrame(columns=cols_out)
-    df_o2.loc[1] = ["Ahorro en logística (%)", 15.0, 12.0]
-    st.session_state[f"df_outputs_{q_n}_2"] = df_o2
+    df_o2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
+    st.session_state[f"df_outputs_{q_n}_2"] = update_avance_resultados(df_o2)
     
     df_t2 = pd.DataFrame(columns=cols_t)
     df_t2.loc[1] = ["1.", "Auditoría Interna", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
@@ -198,8 +214,8 @@ def generar_dummy_onetest():
     st.session_state.db[f"peso_{q_n}_1"] = 100.0
     st.session_state.db[f"obj_{q_n}_1"] = "Obtener certificación en procesos clave."
     df_o3 = pd.DataFrame(columns=cols_out)
-    df_o3.loc[1] = ["Fases completadas", 3.0, 2.0]
-    st.session_state[f"df_outputs_{q_n}_1"] = df_o3
+    df_o3.loc[1] = ["Fases completadas", "U", "NO", 3.0, 2.0, 0.0]
+    st.session_state[f"df_outputs_{q_n}_1"] = update_avance_resultados(df_o3)
     
     df_t3 = pd.DataFrame(columns=cols_t)
     df_t3.loc[1] = ["1.", "Diagnóstico Inicial", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
@@ -213,8 +229,8 @@ def generar_dummy_onetest():
     st.session_state.db[f"peso_{q_n}_1"] = 100.0
     st.session_state.db[f"obj_{q_n}_1"] = "Cerrar métricas anuales y planear presupuesto 2027."
     df_o4 = pd.DataFrame(columns=cols_out)
-    df_o4.loc[1] = ["Presupuestos aprobados", 4.0, 4.0]
-    st.session_state[f"df_outputs_{q_n}_1"] = df_o4
+    df_o4.loc[1] = ["Presupuestos aprobados", "U", "NO", 4.0, 4.0, 0.0]
+    st.session_state[f"df_outputs_{q_n}_1"] = update_avance_resultados(df_o4)
     
     df_t4 = pd.DataFrame(columns=cols_t)
     df_t4.loc[1] = ["1.", "Revisión Financiera", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
@@ -304,7 +320,7 @@ def dibujar_gantt(df_tareas):
 # --- CARGA DE DATOS ---
 def init_okr_structure(q_name, i):
     if f"df_outputs_{q_name}_{i}" not in st.session_state:
-        df_o = pd.DataFrame(columns=["Objetivo / Entregable", "Meta", "Realizado"])
+        df_o = pd.DataFrame(columns=["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"])
         df_o.index = df_o.index + 1
         st.session_state[f"df_outputs_{q_name}_{i}"] = df_o
         
@@ -377,7 +393,8 @@ def cargar_datos():
             if not df_outputs_db.empty and 'Iniciativa_ID' in df_outputs_db.columns:
                 out_okr = df_outputs_db[(pd.to_numeric(df_outputs_db['Iniciativa_ID']) == i) & (df_outputs_db['Trimestre'] == q_name)]
                 if not out_okr.empty:
-                    df_o = out_okr[["Entregable", "Meta", "Realizado"]].rename(columns={"Entregable": "Objetivo / Entregable"}).reset_index(drop=True)
+                    # Renombramos para asegurar la lectura correcta desde la base de datos
+                    df_o = out_okr[["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]].rename(columns={"Avance": "Avance %"}).reset_index(drop=True)
                     df_o.index = df_o.index + 1
                     st.session_state[f"df_outputs_{q_name}_{i}"] = df_o
 
@@ -410,7 +427,7 @@ def guardar_en_bd():
         for m in meses: cols_kpi.extend([f"{m}_P", f"{m}_R"])
         
     cols_okr = ["onetrack_id", "Trimestre_ID", "OKR_ID", "OKR_Nombre", "Objetivo", "Peso_%", "Estatus_Salud"]
-    cols_out = ["onetrack_id", "Iniciativa_ID", "Trimestre", "Entregable", "Meta", "Realizado"]
+    cols_out = ["onetrack_id", "Iniciativa_ID", "Trimestre", "Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]
     cols_tareas = ["onetrack_id", "Iniciativa_ID", "Trimestre", "Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]
 
     df_kpi_master = st.session_state.get("df_kpi_Q1", pd.DataFrame())
@@ -445,12 +462,11 @@ def guardar_en_bd():
         for i in range(1, st.session_state.get(f"num_iniciativas_{q_n}", 1) + 1):
             o_nom = st.session_state.db.get(f"nom_{q_n}_{i}", "")
             if o_nom:
-                # El Estatus se guarda recalculado en el momento (solo para BD, no mostramos error visual)
+                # El Estatus se guarda recalculado en el momento
                 df_t_prog = st.session_state.get(f"df_tareas_{q_n}_{i}", pd.DataFrame())
                 df_t_prog = update_estatus_tareas(df_t_prog)
                 tot_t = len(df_t_prog[df_t_prog["Tarea"].str.strip() != ""]) if not df_t_prog.empty else 0
                 comp = df_t_prog["Completado"].sum() if tot_t > 0 else 0
-                cump_tareas = (comp / tot_t * 100.0) if tot_t > 0 else 0.0
                 
                 if tot_t == 0: e_calc = "⚪ Sin Tareas"
                 elif "🔴 Retrasado" in df_t_prog["Estatus"].values: e_calc = "🔴 Retrasado"
@@ -470,12 +486,15 @@ def guardar_en_bd():
                 df_o = st.session_state.get(f"df_outputs_{q_n}_{i}", pd.DataFrame())
                 if not df_o.empty:
                     for _, o_row in df_o.iterrows():
-                        if str(o_row.get("Objetivo / Entregable", "")).strip() != "":
+                        if str(o_row.get("Nombre", "")).strip() != "":
                             outputs_data.append({
                                 "onetrack_id": token, "Iniciativa_ID": i, "Trimestre": q_n,
-                                "Entregable": str(o_row.get("Objetivo / Entregable", "")),
+                                "Nombre": str(o_row.get("Nombre", "")),
+                                "UM": str(o_row.get("UM", "U")),
+                                "< Mejor": str(o_row.get("< Mejor", "NO")),
                                 "Meta": float(o_row.get("Meta", 0.0)),
-                                "Realizado": float(o_row.get("Realizado", 0.0))
+                                "Real": float(o_row.get("Real", 0.0)),
+                                "Avance": float(o_row.get("Avance %", 0.0))
                             })
                         
                 if not df_t_prog.empty:
@@ -563,11 +582,11 @@ if st.session_state.vista_actual == "Guía de Uso":
     st.markdown("- **< Mejor (Menor es mejor):** Selecciona 'SI' en métricas donde un número bajo es positivo (ej. Rotación de personal, Mermas).")
     st.markdown("<div class='img-placeholder' style='height: 200px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Tabla de KPIs ]</div>", unsafe_allow_html=True)
     
-    st.markdown("<div class='sub-section-title'>2. Iniciativas Estratégicas y Output</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-section-title'>2. Iniciativas Estratégicas y Resultados</div>", unsafe_allow_html=True)
     st.write("Cada trimestre puedes tener múltiples iniciativas que te ayudarán a lograr tus KPIs.")
-    st.markdown("- **Output de la Iniciativa:** Define qué entregables producirá esta iniciativa (Ej. 'Sucursales abiertas'). Ahora puedes añadir todas las filas que necesites en la nueva tabla de Outputs.")
+    st.markdown("- **Resultados de la Iniciativa:** Define qué entregables o métricas directas producirá esta iniciativa (Ej. 'Sucursales abiertas'). Ahora puedes añadir todas las filas que necesites y su **Avance %** se calculará automáticamente.")
     st.markdown("- **Estatus Actual:** El sistema calcula si la iniciativa está 🟢 Completada, 🟢 En Tiempo o 🔴 Retrasada leyendo automáticamente el estatus de las tareas de tu plan de acción.")
-    st.markdown("<div class='img-placeholder' style='height: 200px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Tarjeta de Iniciativa y Output ]</div>", unsafe_allow_html=True)
+    st.markdown("<div class='img-placeholder' style='height: 200px; color: #a0aabf; border: 2px dashed #cbd5e1; background: transparent;'>[ 📸 ESPACIO PARA CAPTURA: Tarjeta de Iniciativa y Resultados ]</div>", unsafe_allow_html=True)
     
     st.markdown("<div class='sub-section-title'>3. Plan de Tareas y Seguimiento (Gantt)</div>", unsafe_allow_html=True)
     st.write("Gestiona la ejecución de cada iniciativa usando el cronograma integrado.")
@@ -637,6 +656,20 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
         for i in range(1, st.session_state.get(f"num_iniciativas_{q_name}", 1) + 1):
             st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
             
+            # Recalcular outputs (resultados) en vivo para la matemática
+            df_o_prog = st.session_state.get(f"df_outputs_{q_name}_{i}", pd.DataFrame())
+            df_o_prog = update_avance_resultados(df_o_prog)
+            st.session_state[f"df_outputs_{q_name}_{i}"] = df_o_prog
+            
+            cump_resultados = 0.0
+            if not df_o_prog.empty:
+                valid_o = df_o_prog[df_o_prog["Nombre"].str.strip() != ""]
+                if not valid_o.empty:
+                    cump_resultados = valid_o["Avance %"].mean()
+            
+            avance_ini = cump_resultados
+
+            # Recalcular tareas en vivo para el estatus y fechas
             df_t_prog = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
             df_t_prog = update_estatus_tareas(df_t_prog)
             st.session_state[f"df_tareas_{q_name}_{i}"] = df_t_prog
@@ -658,7 +691,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
                     fecha_inicio = df_valid_dates['Inicio'].min()
                     fecha_fin = df_valid_dates['Fin'].max()
 
-            # --- REGLA LOGICA DE ESTATUS ---
+            # --- REGLA LOGICA DE ESTATUS DE LA INICIATIVA ---
             if tot_t == 0:
                 estatus_calc = "⚪ Sin Tareas"
             elif "🔴 Retrasado" in t_validas["Estatus"].values:
@@ -668,7 +701,20 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             else:
                 estatus_calc = "🟢 En Tiempo"
             
+            col_ini = ob_color(avance_ini, float(st.session_state.db.get("sob", 100.0)), float(st.session_state.db.get("meta", 90.0)), float(st.session_state.db.get("med", 80.0)))
+            txt_col = "black" if col_ini in ["#ffff00", "#92d050"] else "white"
+
             st.markdown(f"<div class='iniciativa-header'>Iniciativa #{i}</div>", unsafe_allow_html=True)
+            
+            h_col1, h_col2 = st.columns([1, 2.5])
+            with h_col1: 
+                pass # Espacio liberado
+            with h_col2: 
+                st.markdown(f"""
+                <div style='display:flex; gap:10px; justify-content: flex-end;'>
+                    <div style='background:{col_ini}; color:{txt_col}; padding: 8px 15px; border-radius:6px; font-weight:900; font-size:14px; box-shadow:0 2px 4px rgba(0,0,0,0.1);'>CUMPLIMIENTO DE RESULTADOS: {avance_ini:.1f}%</div>
+                </div>
+                """, unsafe_allow_html=True)
             
             ch1, ch2, ch3 = st.columns([3, 1, 1])
             with ch1:
@@ -689,10 +735,16 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             if pd.notnull(fecha_inicio) and pd.notnull(fecha_fin):
                 st.markdown(f"<div style='background-color:#f8f9fa; padding:10px 15px; border-radius:6px; border:1px solid #e5e7eb; margin-bottom:15px; margin-top:15px;'><strong style='color:#002060;'>📅 Duración de la Iniciativa:</strong> &nbsp;&nbsp; {format_date_spanish(fecha_inicio)} &mdash; {format_date_spanish(fecha_fin)}</div>", unsafe_allow_html=True)
             
-            st.markdown("<div class='sub-section-title'>Outputs de la Iniciativa</div>", unsafe_allow_html=True)
+            # --- NUEVA SECCION RESULTADOS ---
+            st.markdown("<div class='sub-section-title'>Resultados de la Iniciativa</div>", unsafe_allow_html=True)
             st.session_state[f"df_outputs_{q_name}_{i}"] = st.data_editor(
                 st.session_state[f"df_outputs_{q_name}_{i}"],
                 use_container_width=True, hide_index=True, num_rows="dynamic",
+                column_config={
+                    "UM": st.column_config.SelectboxColumn(options=["U", "$", "%", "Tiempo"]),
+                    "< Mejor": st.column_config.SelectboxColumn(options=["NO", "SI"]),
+                    "Avance %": st.column_config.NumberColumn(format="%.1f %%", disabled=True)
+                },
                 key=f"ed_out_{q_name}_{i}"
             )
             
@@ -743,12 +795,15 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             if str(st.session_state.db.get(f"nom_{q_name}_{i}", "")).strip():
                 peso_o = float(st.session_state.db.get(f"peso_{q_name}_{i}", 0.0))
                 
-                df_tar = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
-                t_valid = df_tar[df_tar["Tarea"].str.strip() != ""] if not df_tar.empty else pd.DataFrame()
-                tot_t = len(t_valid)
-                cump_o_tar = (t_valid["Completado"].sum() / tot_t * 100.0) if tot_t > 0 else 0.0
+                df_o = st.session_state.get(f"df_outputs_{q_name}_{i}", pd.DataFrame())
+                df_o = update_avance_resultados(df_o)
+                cump_resultados = 0.0
+                if not df_o.empty:
+                    valid_o = df_o[df_o["Nombre"].str.strip() != ""]
+                    if not valid_o.empty:
+                        cump_resultados = valid_o["Avance %"].mean()
                 
-                cump_o_ini = cump_o_tar
+                cump_o_ini = cump_resultados
                     
                 acum_o += cump_o_ini * (peso_o / 100.0); t_peso_o += peso_o
         res_o = (acum_o / (t_peso_o / 100.0)) if t_peso_o > 0 else 0.0
