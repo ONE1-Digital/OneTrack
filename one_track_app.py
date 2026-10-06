@@ -98,7 +98,7 @@ init_sync_widget("cfg_sob", 100.0)
 init_sync_widget("cfg_meta", 90.0)
 init_sync_widget("cfg_med", 80.0)
 
-# --- FUNCIONES MATEMATICAS Y COLORES ---
+# --- FUNCIONES MATEMATICAS, VISUALES Y COLORES ---
 def calc_cump(prog, real, menor_mejor="NO"):
     if prog == 0 and real == 0: return 0.0
     if menor_mejor == "SI": return (prog / real * 100) if real > 0 else 100.0
@@ -116,7 +116,8 @@ def format_date_spanish(d):
 
 def update_estatus_tareas(df):
     hoy = date.today()
-    if "Estatus" not in df.columns: df["Estatus"] = "⚪ Pendiente"
+    if "Estatus" not in df.columns:
+        df["Estatus"] = "⚪ Pendiente"
     for idx, row in df.iterrows():
         if row.get("Completado", False):
             df.at[idx, "Estatus"] = "🟢 A tiempo"
@@ -143,8 +144,47 @@ def update_avance_resultados(df):
                 df.at[idx, "Avance %"] = calc_cump(meta, real, menor)
             except:
                 df.at[idx, "Avance %"] = 0.0
-        else: df.at[idx, "Avance %"] = 0.0
+        else:
+            df.at[idx, "Avance %"] = 0.0
     return df
+
+def render_footer(df, meses):
+    html_footer = "<div style='display:flex; justify-content:flex-start; gap:12px; margin-bottom: 20px; align-items:center;'><div style='font-weight:900; color:#002060; font-size:15px; text-transform:uppercase;'>Avance Mensual:</div>"
+    v_sob, v_meta, v_med = float(st.session_state.get("val_cfg_sob", 100.0)), float(st.session_state.get("val_cfg_meta", 90.0)), float(st.session_state.get("val_cfg_med", 80.0))
+    for m in meses:
+        total_peso, acumulado = 0.0, 0.0
+        for i in range(len(df)):
+            if str(df["Indicadores Clave de Desempeño (KPIs)"].iloc[i]).strip() != "":
+                p, r = float(df[f"{m} Prog"].iloc[i] or 0), float(df[f"{m} Real"].iloc[i] or 0)
+                peso = float(df["Peso %"].iloc[i] or 0)
+                cump = calc_cump(p, r, str(df["< Mejor"].iloc[i]))
+                acumulado += cump * (peso / 100.0)
+                total_peso += peso
+        avance = (acumulado / (total_peso / 100.0)) if total_peso > 0 else 0.0
+        col = ob_color(avance, v_sob, v_meta, v_med)
+        txt = "black" if col in ["#ffff00", "#92d050"] else "white"
+        html_footer += f"<div class='footer-box' style='background-color:{col}; color:{txt};'>{m}: {avance:.1f}%</div>"
+    st.markdown(html_footer + "</div>", unsafe_allow_html=True)
+
+def dibujar_gantt(df_tareas):
+    df_plot = df_tareas.copy()
+    df_plot = df_plot[df_plot["Tarea"].str.strip() != ""]
+    df_plot["Inicio"] = pd.to_datetime(df_plot["Inicio"], errors='coerce')
+    df_plot["Fin"] = pd.to_datetime(df_plot["Fin"], errors='coerce')
+    df_plot = df_plot.dropna(subset=["Inicio", "Fin"])
+    if df_plot.empty: return
+    
+    df_plot = df_plot.sort_values(by="Jerarquia")
+    df_plot['Nombre'] = df_plot['Jerarquia'] + " " + df_plot['Tarea']
+    df_plot['Estado_Visual'] = df_plot['Completado'].apply(lambda x: "Realizado" if x else "Pendiente")
+    
+    chart = alt.Chart(df_plot).mark_bar(cornerRadius=4, size=20).encode(
+        x=alt.X('Inicio', title='', axis=alt.Axis(format="%d %b", grid=True, gridColor="#f0f2f6")), x2='Fin',
+        y=alt.Y('Nombre', sort=df_plot['Nombre'].tolist(), title='', axis=alt.Axis(labelFontWeight="bold", labelLimit=300)),
+        color=alt.Color('Estado_Visual', scale=alt.Scale(domain=['Realizado', 'Pendiente'], range=['#002060', '#a0aabf']), legend=alt.Legend(title="Estado", orient="bottom"))
+    ).properties(height=alt.Step(40))
+    st.altair_chart(chart, use_container_width=True)
+
 
 # --- DUMMY CON INYECCIÓN SEGURA ---
 def generar_dummy_onetest():
@@ -239,14 +279,58 @@ def generar_dummy_onetest():
     df_t4.loc[3] = ["3.", "Presentación Ejecutiva", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
     st.session_state[f"df_tareas_{q_n}_1"] = update_estatus_tareas(df_t4)
 
+# --- CALLBACK DE LIMPIEZA TOTAL Y GUARDADO ---
 def ejecutar_dummy_callback():
-    # Limpiamos las tablas cacheadas en pantalla para forzar a Streamlit a redibujarlas con el dummy fresco
     for key in list(st.session_state.keys()):
         if key.startswith("ed_") or "loaded" in key:
             del st.session_state[key]
+            
     generar_dummy_onetest()
     guardar_en_bd()
     st.session_state.datos_cargados = False
+
+# --- AUTENTICACION ---
+if 'user_info' not in st.session_state or st.session_state.user_info is None:
+    st.markdown("<br><br>", unsafe_allow_html=True)
+    col1, col2, col3 = st.columns([1, 1, 1])
+    with col2:
+        st.markdown(f"<div style='text-align:center; margin-bottom:40px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 200px; object-fit: contain;'></div>", unsafe_allow_html=True)
+        st.markdown("<div style='padding:20px; max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
+        user = st.text_input("**Usuario**")
+        pwd = st.text_input("**Contraseña**", type="password")
+        st.write("")
+        if st.button("Iniciar Sesión", type="primary", use_container_width=True):
+            df_u = conn.query("SELECT * FROM usuarios", ttl=0)
+            match = df_u[(df_u['username'] == user) & (df_u['password'] == pwd)]
+            if not match.empty:
+                st.session_state.user_info = match.iloc[0].to_dict()
+                st.session_state.datos_cargados = False
+                st.rerun()
+            else:
+                st.error("Credenciales incorrectas")
+        st.markdown("</div>", unsafe_allow_html=True)
+    st.stop()
+
+# --- PANEL DE ADMINISTRACION ---
+if st.session_state.user_info['role'] == 'admin':
+    st.markdown("<h2 style='color:#002060; font-weight:900;'>Panel de Administración</h2>", unsafe_allow_html=True)
+    if st.button("Cerrar Sesión"):
+        st.session_state.user_info = None
+        st.rerun()
+    st.markdown("<div class='sub-section-title'>Gestión de Bases de Clientes</div>", unsafe_allow_html=True)
+    df_u = conn.query("SELECT * FROM usuarios", ttl=0)
+    df_clients = df_u[df_u['role'] == 'client'].copy()
+    edited_clients = st.data_editor(df_clients, num_rows="dynamic", use_container_width=True, hide_index=True)
+    if st.button("Guardar Usuarios", type="primary"):
+        df_admin = df_u[df_u['role'] == 'admin']
+        edited_clients['role'] = 'client'
+        df_final = pd.concat([df_admin, edited_clients], ignore_index=True)
+        df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
+        st.success("Usuarios actualizados correctamente.")
+    st.stop()
+
+# --- CONSTANTES CLIENTE ---
+token = st.session_state.user_info['username']
 
 # --- CARGA DE DATOS ---
 def init_okr_structure(q_name, i):
@@ -291,7 +375,7 @@ def cargar_datos():
     set_sync_widget("ui_p_okrs", float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0)
     set_sync_widget("cfg_sob", float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0)
     set_sync_widget("cfg_meta", float(df_kpis.iloc[0].get("U_Verde", 90.0)) if not es_nuevo else 90.0)
-    set_sync_widget("cfg_med", float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0)
+    set_sync_widget("cfg_med", float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0
     
     set_sync_widget("ui_empresa", str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", ""))
     set_sync_widget("ui_dueno", str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", ""))
@@ -346,46 +430,6 @@ def cargar_datos():
 
     st.session_state.datos_cargados = True
 
-if 'user_info' not in st.session_state or st.session_state.user_info is None:
-    st.markdown("<br><br>", unsafe_allow_html=True)
-    col1, col2, col3 = st.columns([1, 1, 1])
-    with col2:
-        st.markdown(f"<div style='text-align:center; margin-bottom:40px;'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 200px; object-fit: contain;'></div>", unsafe_allow_html=True)
-        st.markdown("<div style='padding:20px; max-width: 400px; margin: 0 auto;'>", unsafe_allow_html=True)
-        user = st.text_input("**Usuario**")
-        pwd = st.text_input("**Contraseña**", type="password")
-        st.write("")
-        if st.button("Iniciar Sesión", type="primary", use_container_width=True):
-            df_u = conn.query("SELECT * FROM usuarios", ttl=0)
-            match = df_u[(df_u['username'] == user) & (df_u['password'] == pwd)]
-            if not match.empty:
-                st.session_state.user_info = match.iloc[0].to_dict()
-                st.session_state.datos_cargados = False
-                st.rerun()
-            else:
-                st.error("Credenciales incorrectas")
-        st.markdown("</div>", unsafe_allow_html=True)
-    st.stop()
-
-# --- PANEL DE ADMINISTRACION ---
-if st.session_state.user_info['role'] == 'admin':
-    st.markdown("<h2 style='color:#002060; font-weight:900;'>Panel de Administración</h2>", unsafe_allow_html=True)
-    if st.button("Cerrar Sesión"):
-        st.session_state.user_info = None
-        st.rerun()
-    st.markdown("<div class='sub-section-title'>Gestión de Bases de Clientes</div>", unsafe_allow_html=True)
-    df_u = conn.query("SELECT * FROM usuarios", ttl=0)
-    df_clients = df_u[df_u['role'] == 'client'].copy()
-    edited_clients = st.data_editor(df_clients, num_rows="dynamic", use_container_width=True, hide_index=True)
-    if st.button("Guardar Usuarios", type="primary"):
-        df_admin = df_u[df_u['role'] == 'admin']
-        edited_clients['role'] = 'client'
-        df_final = pd.concat([df_admin, edited_clients], ignore_index=True)
-        df_final.to_sql("usuarios", con=conn.engine, if_exists="replace", index=False)
-        st.success("Usuarios actualizados correctamente.")
-    st.stop()
-
-token = st.session_state.user_info['username']
 cargar_datos()
 
 # --- OPTIMIZACION DE GUARDADO RÁPIDO (LEE DESDE LA BÓVEDA SEGURA VAL_) ---
