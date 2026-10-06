@@ -98,7 +98,7 @@ init_sync_widget("cfg_sob", 100.0)
 init_sync_widget("cfg_meta", 90.0)
 init_sync_widget("cfg_med", 80.0)
 
-# --- FUNCIONES MATEMATICAS, VISUALES Y COLORES ---
+# --- FUNCIONES MATEMATICAS Y COLORES ---
 def calc_cump(prog, real, menor_mejor="NO"):
     if prog == 0 and real == 0: return 0.0
     if menor_mejor == "SI": return (prog / real * 100) if real > 0 else 100.0
@@ -125,11 +125,14 @@ def update_estatus_tareas(df):
             if pd.notnull(row.get("Fin")):
                 try:
                     fin = pd.to_datetime(row["Fin"]).date()
-                    if fin < hoy: df.at[idx, "Estatus"] = "🔴 Retrasado"
-                    else: df.at[idx, "Estatus"] = "🟢 A tiempo"
+                    if fin < hoy:
+                        df.at[idx, "Estatus"] = "🔴 Retrasado"
+                    else:
+                        df.at[idx, "Estatus"] = "🟢 A tiempo"
                 except:
                     df.at[idx, "Estatus"] = "🟢 A tiempo"
-            else: df.at[idx, "Estatus"] = "⚪ Pendiente"
+            else:
+                df.at[idx, "Estatus"] = "⚪ Pendiente"
     return df
 
 def update_avance_resultados(df):
@@ -185,8 +188,7 @@ def dibujar_gantt(df_tareas):
     ).properties(height=alt.Step(40))
     st.altair_chart(chart, use_container_width=True)
 
-
-# --- DUMMY CON INYECCIÓN SEGURA ---
+# --- FUNCION DUMMY MEJORADA CON ESTRUCTURA EXACTA ---
 def generar_dummy_onetest():
     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
     cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
@@ -289,7 +291,6 @@ def ejecutar_dummy_callback():
     guardar_en_bd()
     st.session_state.datos_cargados = False
 
-# --- AUTENTICACION ---
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
@@ -375,7 +376,7 @@ def cargar_datos():
     set_sync_widget("ui_p_okrs", float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0)
     set_sync_widget("cfg_sob", float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0)
     set_sync_widget("cfg_meta", float(df_kpis.iloc[0].get("U_Verde", 90.0)) if not es_nuevo else 90.0)
-    set_sync_widget("cfg_med", float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0
+    set_sync_widget("cfg_med", float(df_kpis.iloc[0].get("U_Amarillo", 80.0)) if not es_nuevo else 80.0)
     
     set_sync_widget("ui_empresa", str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", ""))
     set_sync_widget("ui_dueno", str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", ""))
@@ -395,7 +396,7 @@ def cargar_datos():
         else:
             df_k.loc[1] = ["", "Promedio", 0.0, "U", "NO", 0.0] + [0.0]*(len(meses)*2)
         
-        st.session_state[f"df_kpi_{q_name}"] = df_k
+        if f"df_kpi_{q_name}" not in st.session_state: st.session_state[f"df_kpi_{q_name}"] = df_k
 
         for i in range(1, st.session_state[f"num_iniciativas_{q_name}"] + 1):
             init_okr_structure(q_name, i)
@@ -432,7 +433,7 @@ def cargar_datos():
 
 cargar_datos()
 
-# --- OPTIMIZACION DE GUARDADO RÁPIDO (LEE DESDE LA BÓVEDA SEGURA VAL_) ---
+# --- OPTIMIZACION DE GUARDADO RÁPIDO ---
 def guardar_en_bd():
     kpis_data, okrs_data, tareas_data, outputs_data = [], [], [], []
     peso_k, peso_o = float(st.session_state.get("val_ui_p_kpis", 50.0)), float(st.session_state.get("val_ui_p_okrs", 50.0))
@@ -674,7 +675,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
         for i in range(1, st.session_state.get(f"num_iniciativas_{q_name}", 1) + 1):
             st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
             
-            # Recalcular outputs (resultados) en vivo para la matemática
+            # Recalcular outputs en vivo
             df_o_prog = st.session_state.get(f"df_outputs_{q_name}_{i}", pd.DataFrame())
             df_o_prog = update_avance_resultados(df_o_prog)
             st.session_state[f"df_outputs_{q_name}_{i}"] = df_o_prog
@@ -687,7 +688,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             
             avance_ini = cump_resultados
 
-            # Recalcular tareas en vivo para el estatus y fechas
+            # Recalcular tareas en vivo
             df_t_prog = st.session_state.get(f"df_tareas_{q_name}_{i}", pd.DataFrame())
             df_t_prog = update_estatus_tareas(df_t_prog)
             st.session_state[f"df_tareas_{q_name}_{i}"] = df_t_prog
