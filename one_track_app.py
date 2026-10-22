@@ -3,22 +3,10 @@ import pandas as pd
 import altair as alt
 from datetime import date
 from sqlalchemy import text
+import streamlit.components.v1 as components
 
 # --- CONFIGURACION DE PAGINA ---
 st.set_page_config(page_title="ONE TRACK - Workspace", layout="wide", initial_sidebar_state="expanded")
-
-# ==========================================
-# 🎥 CONFIGURACION DE ENLACES PARA GIFS 
-# Pega la URL directa de tu .gif entre las comillas.
-# Ejemplo: GIF_KPIS = "https://tu-servidor.com/demo_kpi.gif"
-# ==========================================
-GIF_KPIS = "" 
-GIF_RESULTADOS = "" 
-GIF_GANTT = "" 
-GIF_RECURSOS = ""
-GIF_BOTONES = "" 
-GIF_SEMAFOROS = ""
-# ==========================================
 
 # --- CSS MINIMALISTA, ELEGANTE Y BLANCO ---
 st.markdown("""
@@ -102,10 +90,10 @@ def calc_cump(prog, real, menor_mejor="NO"):
     else: return (real / prog * 100) if prog > 0 else (100.0 if real > 0 else 0.0)
 
 def ob_color(val, c_rojo=79.0, c_amarillo=89.0, c_verde=100.0):
-    if val > c_verde: return "#00b050"       # Súper Verde (> corte verde)
-    elif val > c_amarillo: return "#92d050"   # Verde (Meta: > amarillo y <= verde)
-    elif val > c_rojo: return "#ffff00"       # Amarillo (Medio: > rojo y <= amarillo)
-    else: return "#ff0000"                    # Rojo (Bajo: <= rojo)
+    if val > c_verde: return "#00b050"
+    elif val > c_amarillo: return "#92d050"
+    elif val > c_rojo: return "#ffff00"
+    else: return "#ff0000"
 
 def ob_circle(val, c_rojo=79.0, c_amarillo=89.0, c_verde=100.0):
     if val > c_verde: return "🟢"
@@ -208,15 +196,130 @@ def dibujar_gantt(df_tareas):
     ).properties(height=alt.Step(40))
     st.altair_chart(chart, use_container_width=True)
 
-def render_gif_placeholder(url, placeholder_text):
-    if url and str(url).strip() != "":
-        st.markdown(f"""
-            <div style='text-align: center; margin: 15px 0;'>
-                <img src='{url.strip()}' style='max-width: 100%; border-radius: 10px; border: 1px solid #cbd5e1; box-shadow: 0 4px 6px rgba(0,0,0,0.05);'>
+# --- ANIMACIONES HTML INTERACTIVAS ---
+def animacion_kpis():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: #002060; color: white;">
+                <th style="padding: 8px; text-align: left;">Indicador (KPI)</th>
+                <th style="padding: 8px;">Meta Anual</th><th style="padding: 8px;">Prog</th><th style="padding: 8px;">Real</th><th style="padding: 8px;">Semáforo</th>
+            </tr></thead>
+            <tbody>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Ventas Mensuales</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">$ 500,000</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">$ 40,000</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="kpi_real"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="kpi_sem">⚪</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function run() {
+            while(true) {
+                document.getElementById('kpi_real').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪"; await wait(1000);
+                let t = "$ 42,500";
+                for(let i=0; i<t.length; i++){ document.getElementById('kpi_real').innerText += t[i]; await wait(100); }
+                await wait(500); document.getElementById('kpi_sem').innerText = "🟢"; await wait(3000);
+            }
+        } run();
+    </script>
+    """
+    components.html(html_code, height=120)
+
+def animacion_resultados():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: #002060; color: white;">
+                <th style="padding: 8px; text-align: left;">Nombre del Resultado</th><th style="padding: 8px;">Meta</th><th style="padding: 8px;">Real</th><th style="padding: 8px;">Avance %</th>
+            </tr></thead>
+            <tbody>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Apertura de Sucursales</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">4</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="res_real"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0; font-weight:bold;" id="res_av">-</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function run() {
+            while(true) {
+                document.getElementById('res_real').innerText = ""; document.getElementById('res_av').innerText = "-"; document.getElementById('res_av').style.color = "black"; await wait(1000);
+                let t = "4"; document.getElementById('res_real').innerText += t; await wait(600);
+                document.getElementById('res_av').innerText = "100.0 %"; document.getElementById('res_av').style.color = "#00b050"; await wait(3000);
+            }
+        } run();
+    </script>
+    """
+    components.html(html_code, height=120)
+
+def animacion_gantt():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: #002060; color: white;">
+                <th style="padding: 8px; text-align: left;">Jerarquía</th><th style="padding: 8px; text-align: left;">Tarea</th><th style="padding: 8px;">Completado</th><th style="padding: 8px;">Estatus Automático</th>
+            </tr></thead>
+            <tbody>
+                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">1.1</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Estudio de mercado</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;"><input type="checkbox" id="chk"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0; font-weight:bold;" id="tar_est">🔴 Retrasado</td></tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function run() {
+            while(true) {
+                document.getElementById('chk').checked = false; document.getElementById('tar_est').innerText = "🔴 Retrasado"; document.getElementById('tar_est').style.color = "red"; await wait(1500);
+                document.getElementById('chk').checked = true; await wait(300);
+                document.getElementById('tar_est').innerText = "🟢 A tiempo"; document.getElementById('tar_est').style.color = "green"; await wait(3000);
+            }
+        } run();
+    </script>
+    """
+    components.html(html_code, height=120)
+
+def animacion_semaforos():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items:center; gap: 20px;">
+        <div style="flex:1;">
+            <div style="font-weight:bold; margin-bottom:5px;">Límite Superior Rojo (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:5px; padding:8px;" id="in_r"></div>
+        </div>
+        <div style="flex:2;">
+            <div style="background:#ff0000; color:white; padding:10px; border-radius:5px; font-weight:bold; display:flex; justify-content:space-between;">
+                <span>🔴 BAJO</span><span id="out_r">Menor o igual a 79%</span>
             </div>
-        """, unsafe_allow_html=True)
-    else:
-        st.markdown(f"<div class='img-placeholder' style='height: 180px; color: #94a3b8; border: 2px dashed #cbd5e1; background: #ffffff; font-weight: 600;'>{placeholder_text}</div>", unsafe_allow_html=True)
+            <div style="background:#ffff00; color:black; padding:10px; border-radius:5px; font-weight:bold; display:flex; justify-content:space-between; margin-top:5px;">
+                <span>🟡 MEDIO</span><span id="out_a">De 80% a 89%</span>
+            </div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function run() {
+            while(true) {
+                document.getElementById('in_r').innerText = "79"; document.getElementById('out_r').innerText = "Menor o igual a 79%"; document.getElementById('out_a').innerText = "De 80% a 89%"; await wait(1500);
+                document.getElementById('in_r').innerText = ""; document.getElementById('in_r').innerText = "6"; await wait(200); document.getElementById('in_r').innerText = "65"; await wait(400);
+                document.getElementById('out_r').innerText = "Menor o igual a 65%"; document.getElementById('out_a').innerText = "De 66% a 89%"; await wait(3000);
+            }
+        } run();
+    </script>
+    """
+    components.html(html_code, height=130)
+
+def animacion_botones():
+    html_code = """
+    <div style="display:flex; justify-content:center; align-items:center; height:100px; font-family:sans-serif;">
+        <div id="btn" style="background:#002060; color:white; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:all 0.2s;">➕ Añadir Iniciativa</div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function run() {
+            while(true) {
+                document.getElementById('btn').style.transform = "scale(1)"; document.getElementById('btn').style.background = "#002060"; await wait(1500);
+                document.getElementById('btn').style.transform = "scale(0.95)"; document.getElementById('btn').style.background = "#334c80"; await wait(200);
+                document.getElementById('btn').style.transform = "scale(1)"; document.getElementById('btn').style.background = "#002060"; await wait(3000);
+            }
+        } run();
+    </script>
+    """
+    components.html(html_code, height=120)
 
 # --- SINCRONIZADOR DE EDICIONES ACTIVAS ---
 def commit_live_edits():
@@ -263,10 +366,10 @@ def generar_dummy_onetest():
     set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
     set_store(f"ui_peso_{q_n}_1", 100.0)
     set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales, 1 Especialista en Performance Marketing")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta digital y prospección en campo")
-    set_store(f"ui_rec_infra_{q_n}_1", "Oficina satélite compartida en Monterrey, líneas IP móviles")
-    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM Pro, Zoom Phone, Plataforma Meta Ads")
+    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
+    set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
+    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
     df_o1 = pd.DataFrame(columns=cols_out)
     df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
@@ -281,10 +384,10 @@ def generar_dummy_onetest():
     set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
     set_store(f"ui_peso_{q_n}_1", 60.0)
     set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager, 2 Ingenieros de Software, 1 Diseñador UX/UI")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN para desarrollo y pruebas de usabilidad")
-    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS dedicados para pruebas de carga")
-    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub Enterprise, Docker, Sentry")
+    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
+    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
     df_o2_1 = pd.DataFrame(columns=cols_out)
     df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
@@ -294,13 +397,13 @@ def generar_dummy_onetest():
     df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
     set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
 
-    set_store(f"ui_nom_{q_n}_2", "Optimización Costos Operativos")
+    set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
     set_store(f"ui_peso_{q_n}_2", 40.0)
-    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística y distribución.")
-    set_store(f"ui_rec_talento_{q_n}_2", "1 Coordinador de Logística, 1 Auditor Financiero Externo")
-    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN en honorarios de consultoría")
-    set_store(f"ui_rec_infra_{q_n}_2", "Revisión física de bodegas y contratos de flota")
-    set_store(f"ui_rec_tec_{q_n}_2", "Sistema TMS de optimización de rutas, Excel Avanzado")
+    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
+    set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
+    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_2", "-")
+    set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
     df_o2_2 = pd.DataFrame(columns=cols_out)
     df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
     set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
@@ -312,13 +415,13 @@ def generar_dummy_onetest():
 
     # Q3
     q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Certificación ISO 9001")
+    set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
     set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos de calidad clave.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Oficial de Cumplimiento, Comité Interno de Calidad (5 líderes)")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN para auditoría certificadora y talleres")
-    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación y señalética institucional de procesos")
-    set_store(f"ui_rec_tec_{q_n}_1", "Gestor documental Confluence, Software de Auditoría ISO")
+    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
+    set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
+    set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
     df_o3 = pd.DataFrame(columns=cols_out)
     df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
@@ -330,13 +433,13 @@ def generar_dummy_onetest():
 
     # Q4
     q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Planificación Estratégica 2027")
+    set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
     set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas anuales y consolidar presupuestos de 2027.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo Completo, 1 Consultor de Estrategia")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN para offsite estratégico y estudios de mercado")
-    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa para retiro de planeación anual")
-    set_store(f"ui_rec_tec_{q_n}_1", "Tableros ONE TRACK, Miro, Power BI")
+    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
+    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
+    set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
     df_o4 = pd.DataFrame(columns=cols_out)
     df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
@@ -403,9 +506,6 @@ def cargar_datos():
     set_store("ui_empresa", str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", ""))
     set_store("ui_dueno", str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", ""))
     set_store("ui_puesto", str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else st.session_state.user_info.get("puesto", ""))
-
-    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
-    cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
 
     c_r = float(get_store("cfg_corte_rojo", 79.0))
     c_a = float(get_store("cfg_corte_amarillo", 89.0))
@@ -682,7 +782,7 @@ if st.session_state.vista_actual == "Guía de Uso":
         - *Valor Final:* Para metas puntuales de fin de ciclo.
     * **< Mejor (Menor es Mejor):** Si seleccionas **SI**, la fórmula premia valores bajos (útil para rotación de personal, mermas o costos).
     """)
-    render_gif_placeholder(GIF_KPIS, "[ 🎥 ESPACIO PARA GIF: Carga y semaforización de KPIs mensuales ]")
+    animacion_kpis()
     
     st.markdown("<div class='sub-section-title'>3. Iniciativas Estratégicas y Resultados</div>", unsafe_allow_html=True)
     st.write("""
@@ -691,7 +791,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Resultados de la Iniciativa:** Matriz donde desglosas los entregables cuantitativos de la iniciativa (Nombre, Unidad de Medida, Sentido menor mejor, Meta y Real). El sistema calcula en vivo el **Avance %** exacto de cada resultado y promedia el cumplimiento global.
     * **Estatus Actual:** El semáforo general de la iniciativa evalúa automáticamente el estatus del cronograma de tareas (detectando si existen actividades en riesgo o retraso).
     """)
-    render_gif_placeholder(GIF_RESULTADOS, "[ 🎥 ESPACIO PARA GIF: Creación de resultados y cálculo de avance ]")
+    animacion_resultados()
     
     st.markdown("<div class='sub-section-title'>4. Plan de Acción y Cronograma Gantt</div>", unsafe_allow_html=True)
     st.write("""
@@ -700,7 +800,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Estatus Automático de Tarea:** Compara en tiempo real la fecha límite (`Fin`) contra la fecha del día de hoy. Si la actividad no está completada y ya venció, se marca como 🔴 Retrasado de forma inmediata.
     * **Duración de la Iniciativa:** El sistema detecta la fecha de inicio más temprana y la fecha fin más tardía del plan para mostrar el rango total de ejecución.
     """)
-    render_gif_placeholder(GIF_GANTT, "[ 🎥 ESPACIO PARA GIF: Diagrama Gantt y estatus automático de tareas ]")
+    animacion_gantt()
     
     st.markdown("<div class='sub-section-title'>5. Asignación y Control de Recursos</div>", unsafe_allow_html=True)
     st.write("""
@@ -710,9 +810,16 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Infraestructura:** Espacios físicos, bodegas, líneas telefónicas o ambientes de servidores.
     * **Tecnología:** Herramientas de software, licencias, sistemas CRM o APIs indispensables.
     """)
-    render_gif_placeholder(GIF_RECURSOS, "[ 🎥 ESPACIO PARA GIF: Panel 2x2 de Recursos por iniciativa ]")
     
-    st.markdown("<div class='sub-section-title'>6. Configuración de Semáforos e Intervalos</div>", unsafe_allow_html=True)
+    st.markdown("<div class='sub-section-title'>6. Añadir o Quitar Iniciativas</div>", unsafe_allow_html=True)
+    st.write("""
+    Si necesitas más bloques de iniciativas para un trimestre específico:
+    * Ve al final de la página del trimestre y usa los botones **➕ Añadir Iniciativa** o **🗑️ Quitar Iniciativa**.
+    * *Nota:* Recuerda que las iniciativas de cada trimestre (Q1, Q2, etc.) son 100% independientes unas de otras.
+    """)
+    animacion_botones()
+    
+    st.markdown("<div class='sub-section-title'>7. Modificar Semáforos e Intervalos (Configuración)</div>", unsafe_allow_html=True)
     st.write("""
     Personaliza la escala de exigencia institucional sin solapamiento de porcentajes:
     * **Rojo (Bajo):** Del 0% al corte inferior establecido.
@@ -720,9 +827,9 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Verde (Meta):** Intervalo de meta aprobada institucional.
     * **Súper Verde (Sobresaliente):** Rendimientos superiores a la meta fijada.
     """)
-    render_gif_placeholder(GIF_SEMAFOROS, "[ 🎥 ESPACIO PARA GIF: Configuración de intervalos de semáforo ]")
-    
-    st.markdown("<div class='sub-section-title'>7. Resumen Anual y Análisis de Tendencias</div>", unsafe_allow_html=True)
+    animacion_semaforos()
+
+    st.markdown("<div class='sub-section-title'>8. Resumen Anual y Análisis de Tendencias</div>", unsafe_allow_html=True)
     st.write("""
     Vista gerencial consolidada:
     * Muestra la tabla anual con el porcentaje y el círculo de desempeño de cada métrica a lo largo de los 12 meses.
@@ -976,7 +1083,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
     if st.session_state.vista_actual == "Resumen Anual":
         st.markdown("<div class='section-title'>Resumen Anual del Desempeño</div>", unsafe_allow_html=True)
         
-        # Generar tabla anual con círculos después de cada métrica
+        # Generar tabla anual con círculos de semáforo
         df_anual_view = pd.DataFrame()
         df_anual_view["Mes"] = df_anual["Mes"]
         df_anual_view["KPIs (%)"] = df_anual["Indicadores Clave de Desempeño (KPIs)"].apply(lambda x: f"{x:.0%}")
@@ -1032,7 +1139,6 @@ elif st.session_state.vista_actual == "Configuración de ONE Track":
 
     col_int1, col_int2 = st.columns([1.2, 1])
     with col_int1:
-        # Visualización de Intervalos Continuos
         st.markdown(f"""
             <div class='interval-box' style='background-color:#ff0000; color:white;'>
                 <span>🔴 BAJO (ROJO)</span>
