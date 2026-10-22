@@ -19,8 +19,8 @@ st.markdown("""
     [data-testid="stSidebar"] button[kind="primary"] { background-color: #002060 !important; color: #ffffff !important; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border: none;}
     [data-testid="stSidebar"] button p { font-size: 18px !important; font-weight: 900 !important; margin: 0; }
     .section-title { font-size: 26px; font-weight: 900; color: #002060; border-bottom: 3px solid #e5e7eb; padding-bottom: 10px; margin-top: 20px; margin-bottom: 20px; }
-    .sub-section-title { font-size: 15px; font-weight: 900; color: #4b5563; margin-top: 25px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px;}
-    .custom-label { font-size: 14px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; margin-top: 10px; letter-spacing: 0.5px; }
+    .sub-section-title { font-size: 16px; font-weight: 900; color: #002060; margin-top: 28px; margin-bottom: 12px; text-transform: uppercase; letter-spacing: 0.5px; border-left: 4px solid #002060; padding-left: 10px;}
+    .custom-label { font-size: 13px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 5px; margin-top: 10px; letter-spacing: 0.5px; }
     .img-placeholder { background-color: #ffffff; border: 1px solid #e2e8f0; border-radius: 12px; height: 120px; display: flex; align-items: center; justify-content: center; padding: 10px; margin-bottom: 20px; box-shadow: 0 4px 6px rgba(0,0,0,0.04);}
     div[data-baseweb="input"] > div, div[data-baseweb="textarea"] > div, div[data-baseweb="select"] > div { background-color: #ffffff !important; border: 1px solid #cbd5e1 !important; border-radius: 6px !important; }
     .summary-card { background-color: #ffffff; padding: 20px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); text-align: center; border-top: 4px solid #002060; height: 130px; display: flex; flex-direction: column; justify-content: center; align-items: center;}
@@ -33,6 +33,7 @@ st.markdown("""
     div[data-testid="stDataFrame"] table th { background-color: #002060 !important; color: #ffffff !important; font-size: 15px !important; font-weight: 900 !important; text-transform: uppercase; text-align: center !important;}
     .footer-box { border: 1px solid #d1d5db; padding: 6px 15px; font-weight: 900; border-radius: 6px; min-width: 90px; text-align: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);}
     .interval-box { border-radius: 8px; padding: 12px 18px; margin-bottom: 10px; font-weight: 800; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 2px 4px rgba(0,0,0,0.04); }
+    .guide-callout { background-color: #ffffff; padding: 18px 22px; border-radius: 10px; border-left: 5px solid #002060; box-shadow: 0 2px 5px rgba(0,0,0,0.03); margin: 15px 0 20px 0; font-size: 14.5px; line-height: 1.6; color: #334155;}
     </style>
 """, unsafe_allow_html=True)
 
@@ -55,7 +56,7 @@ def init_db():
 
 init_db()
 
-# --- BÓVEDA PERMANENTE DE ESTADO (PERSISTENCIA INVIOLABLE) ---
+# --- BÓVEDA PERMANENTE DE ESTADO (PERSISTENCIA Y CERO DOBLE INPUT) ---
 if "perm_store" not in st.session_state:
     st.session_state.perm_store = {}
 
@@ -83,7 +84,7 @@ def bind_number_input(label, key, default=0.0):
     st.number_input(label, key=key, label_visibility="collapsed")
     set_store(key, st.session_state[key])
 
-# --- FUNCIONES MATEMATICAS, INTERVALOS Y COLORES ---
+# --- FORMULAS MATEMATICAS Y COLORIMETRIA ---
 def calc_cump(prog, real, menor_mejor="NO"):
     if prog == 0 and real == 0: return 0.0
     if menor_mejor == "SI": return (prog / real * 100) if real > 0 else 100.0
@@ -196,268 +197,521 @@ def dibujar_gantt(df_tareas):
     ).properties(height=alt.Step(40))
     st.altair_chart(chart, use_container_width=True)
 
-# --- ANIMACIONES HTML INTERACTIVAS ---
-def animacion_kpis():
-    html_code = """
-    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr style="background: #002060; color: white;">
-                <th style="padding: 8px; text-align: left;">Indicador (KPI)</th>
-                <th style="padding: 8px;">Meta Anual</th><th style="padding: 8px;">Prog</th><th style="padding: 8px;">Real</th><th style="padding: 8px;">Semáforo</th>
-            </tr></thead>
-            <tbody>
-                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Ventas Mensuales</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">$ 500,000</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">$ 40,000</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="kpi_real"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="kpi_sem">⚪</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <script>
-        const wait = ms => new Promise(r => setTimeout(r, ms));
-        async function run() {
-            while(true) {
-                document.getElementById('kpi_real').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪"; await wait(1000);
-                let t = "$ 42,500";
-                for(let i=0; i<t.length; i++){ document.getElementById('kpi_real').innerText += t[i]; await wait(100); }
-                await wait(500); document.getElementById('kpi_sem').innerText = "🟢"; await wait(3000);
-            }
-        } run();
-    </script>
-    """
-    components.html(html_code, height=120)
+# ==============================================================================
+# 🎬 SIMULACIONES INTERACTIVAS REALISTAS (HTML5 / CSS / JS)
+# ==============================================================================
 
-def animacion_resultados():
+def animacion_kpis_realista():
     html_code = """
-    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr style="background: #002060; color: white;">
-                <th style="padding: 8px; text-align: left;">Nombre del Resultado</th><th style="padding: 8px;">Meta</th><th style="padding: 8px;">Real</th><th style="padding: 8px;">Avance %</th>
-            </tr></thead>
-            <tbody>
-                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Apertura de Sucursales</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;">4</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;" id="res_real"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0; font-weight:bold;" id="res_av">-</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <script>
-        const wait = ms => new Promise(r => setTimeout(r, ms));
-        async function run() {
-            while(true) {
-                document.getElementById('res_real').innerText = ""; document.getElementById('res_av').innerText = "-"; document.getElementById('res_av').style.color = "black"; await wait(1000);
-                let t = "4"; document.getElementById('res_real').innerText += t; await wait(600);
-                document.getElementById('res_av').innerText = "100.0 %"; document.getElementById('res_av').style.color = "#00b050"; await wait(3000);
-            }
-        } run();
-    </script>
-    """
-    components.html(html_code, height=120)
-
-def animacion_gantt():
-    html_code = """
-    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-        <table style="width: 100%; border-collapse: collapse;">
-            <thead><tr style="background: #002060; color: white;">
-                <th style="padding: 8px; text-align: left;">Jerarquía</th><th style="padding: 8px; text-align: left;">Tarea</th><th style="padding: 8px;">Completado</th><th style="padding: 8px;">Estatus Automático</th>
-            </tr></thead>
-            <tbody>
-                <tr><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">1.1</td><td style="padding: 8px; border-bottom: 1px solid #e2e8f0;">Estudio de mercado</td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0;"><input type="checkbox" id="chk"></td><td style="padding: 8px; text-align:center; border-bottom: 1px solid #e2e8f0; font-weight:bold;" id="tar_est">🔴 Retrasado</td></tr>
-            </tbody>
-        </table>
-    </div>
-    <script>
-        const wait = ms => new Promise(r => setTimeout(r, ms));
-        async function run() {
-            while(true) {
-                document.getElementById('chk').checked = false; document.getElementById('tar_est').innerText = "🔴 Retrasado"; document.getElementById('tar_est').style.color = "red"; await wait(1500);
-                document.getElementById('chk').checked = true; await wait(300);
-                document.getElementById('tar_est').innerText = "🟢 A tiempo"; document.getElementById('tar_est').style.color = "green"; await wait(3000);
-            }
-        } run();
-    </script>
-    """
-    components.html(html_code, height=120)
-
-def animacion_semaforos():
-    html_code = """
-    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 15px; font-family: sans-serif; font-size: 13px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); display: flex; align-items:center; gap: 20px;">
-        <div style="flex:1;">
-            <div style="font-weight:bold; margin-bottom:5px;">Límite Superior Rojo (%)</div>
-            <div style="border:1px solid #cbd5e1; border-radius:5px; padding:8px;" id="in_r"></div>
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
+        .grid-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+        table { width: 100%; border-collapse: collapse; font-size: 13px; }
+        th { background-color: #002060 !important; color: #ffffff !important; font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 10px 8px; border: 1px solid #1e3a8a;}
+        td { padding: 9px 8px; border: 1px solid #e2e8f0; text-align: center; color: #1e293b; background: #ffffff;}
+        .td-left { text-align: left; font-weight: 600; }
+        .cell-active { background-color: #f1f5f9; outline: 2px solid #002060; outline-offset: -2px; }
+        .select-pill { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: bold; }
+        .cursor { display: inline-block; width: 2px; height: 14px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+    </head>
+    <body>
+        <div class="grid-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 25%;">KPI</th>
+                        <th style="width: 10%;">Tipo</th>
+                        <th style="width: 9%;">Meta</th>
+                        <th style="width: 7%;">UM</th>
+                        <th style="width: 7%;">< Mejor</th>
+                        <th style="width: 8%;">Peso %</th>
+                        <th style="width: 11%;">Ene Prog</th>
+                        <th style="width: 11%;">Ene Real</th>
+                        <th style="width: 12%;">Ene Semáforo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td class="td-left"><span id="kpi_nombre"></span><span id="c_nom" class="cursor"></span></td>
+                        <td><span class="select-pill" id="kpi_tipo">Acumulado</span></td>
+                        <td id="kpi_meta"></td>
+                        <td><span class="select-pill" id="kpi_um">$</span></td>
+                        <td><span class="select-pill" id="kpi_menor">NO</span></td>
+                        <td id="kpi_peso"></td>
+                        <td id="kpi_p1"></td>
+                        <td id="kpi_r1" style="font-weight: 600;"></td>
+                        <td id="kpi_sem" style="font-size: 16px;">⚪</td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
-        <div style="flex:2;">
-            <div style="background:#ff0000; color:white; padding:10px; border-radius:5px; font-weight:bold; display:flex; justify-content:space-between;">
-                <span>🔴 BAJO</span><span id="out_r">Menor o igual a 79%</span>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function type(id, curId, text, speed=40) {
+                const el = document.getElementById(id);
+                const cur = document.getElementById(curId);
+                if(cur) cur.style.display = "inline-block";
+                el.innerText = "";
+                for(let i=0; i<text.length; i++) {
+                    el.innerText += text[i];
+                    await wait(speed);
+                }
+                if(cur) cur.style.display = "none";
+            }
+            async function loop() {
+                while(true) {
+                    document.getElementById('kpi_nombre').innerText = "";
+                    document.getElementById('kpi_meta').innerText = "";
+                    document.getElementById('kpi_peso').innerText = "";
+                    document.getElementById('kpi_p1').innerText = "";
+                    document.getElementById('kpi_r1').innerText = "";
+                    document.getElementById('kpi_sem').innerText = "⚪";
+                    await wait(800);
+
+                    await type('kpi_nombre', 'c_nom', 'Ventas Nuevos Clientes', 45);
+                    await wait(300);
+                    document.getElementById('kpi_meta').innerText = "500,000";
+                    await wait(300);
+                    document.getElementById('kpi_peso').innerText = "50 %";
+                    await wait(400);
+
+                    document.getElementById('kpi_p1').innerText = "40,000";
+                    await wait(400);
+                    document.getElementById('kpi_r1').innerText = "42,500";
+                    await wait(300);
+
+                    document.getElementById('kpi_sem').innerText = "🟢";
+                    await wait(3500);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=140)
+
+def animacion_iniciativa_completa_realista():
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 12px; background: transparent; }
+        .card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .badge { background: #002060; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 900; font-size: 15px; }
+        .pill-res { padding: 8px 15px; border-radius: 6px; font-weight: 900; font-size: 13px; color: white; background: #64748b; transition: all 0.3s; }
+        .grid-3 { display: grid; grid-template-columns: 3fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
+        .label { font-size: 11px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;}
+        .mock-input { height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; display: flex; align-items: center; font-size: 13px; color: #1e293b; background: #fff; box-sizing: border-box; }
+        .mock-area { height: 60px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #1e293b; background: #fff; box-sizing: border-box; line-height: 1.4; margin-bottom: 15px;}
+        table { width: 100%; border-collapse: collapse; font-size: 12.5px; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;}
+        th { background: #002060; color: #fff; padding: 8px 10px; text-align: center; font-size: 11px; text-transform: uppercase; }
+        td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: center; }
+        .cursor { display: inline-block; width: 2px; height: 14px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+    </head>
+    <body>
+        <div class="card">
+            <div class="header">
+                <div class="badge">Iniciativa #1</div>
+                <div id="pill_cump" class="pill-res">CUMPLIMIENTO DE RESULTADOS: 0.0%</div>
             </div>
-            <div style="background:#ffff00; color:black; padding:10px; border-radius:5px; font-weight:bold; display:flex; justify-content:space-between; margin-top:5px;">
-                <span>🟡 MEDIO</span><span id="out_a">De 80% a 89%</span>
+            <div class="grid-3">
+                <div>
+                    <div class="label">NOMBRE DE LA INICIATIVA</div>
+                    <div class="mock-input"><span id="ini_nom"></span><span id="c_nom" class="cursor"></span></div>
+                </div>
+                <div>
+                    <div class="label">PONDERACIÓN (%)</div>
+                    <div class="mock-input" id="ini_peso" style="justify-content:center; font-weight:bold;"></div>
+                </div>
+                <div>
+                    <div class="label">ESTATUS ACTUAL</div>
+                    <div class="mock-input" id="ini_est" style="justify-content:center; font-weight:bold; color:#64748b;">⚪ Sin Tareas</div>
+                </div>
+            </div>
+            <div class="label">OBJETIVO</div>
+            <div class="mock-area" id="ini_obj"></div>
+
+            <div class="label" style="margin-top: 10px; margin-bottom: 8px;">RESULTADOS DE LA INICIATIVA (MÉTRICAS DIRECTAS)</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th style="text-align:left; width:40%;">Nombre del Resultado</th>
+                        <th>UM</th>
+                        <th>< Mejor</th>
+                        <th>Meta</th>
+                        <th>Real</th>
+                        <th>Avance %</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td style="text-align:left;" id="r1_nom">-</td>
+                        <td id="r1_um">-</td>
+                        <td id="r1_menor">-</td>
+                        <td id="r1_meta">-</td>
+                        <td id="r1_real">-</td>
+                        <td id="r1_av" style="font-weight:900;">-</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function type(id, curId, text, speed=35) {
+                const el = document.getElementById(id);
+                const cur = document.getElementById(curId);
+                if(cur) cur.style.display = "inline-block";
+                el.innerText = "";
+                for(let i=0; i<text.length; i++) {
+                    el.innerText += text[i];
+                    await wait(speed);
+                }
+                if(cur) cur.style.display = "none";
+            }
+            async function loop() {
+                while(true) {
+                    document.getElementById('ini_nom').innerText = "";
+                    document.getElementById('ini_peso').innerText = "";
+                    document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
+                    document.getElementById('ini_est').style.color = "#64748b";
+                    document.getElementById('ini_obj').innerText = "";
+                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO DE RESULTADOS: 0.0%";
+                    document.getElementById('pill_cump').style.background = "#64748b";
+
+                    document.getElementById('r1_nom').innerText = "-";
+                    document.getElementById('r1_um').innerText = "-";
+                    document.getElementById('r1_menor').innerText = "-";
+                    document.getElementById('r1_meta').innerText = "-";
+                    document.getElementById('r1_real').innerText = "-";
+                    document.getElementById('r1_av').innerText = "-";
+                    document.getElementById('r1_av').style.color = "black";
+                    await wait(800);
+
+                    await type('ini_nom', 'c_nom', 'Lanzamiento de Plataforma B2B', 35);
+                    await wait(200);
+                    document.getElementById('ini_peso').innerText = "60.0";
+                    await wait(300);
+                    document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
+                    await wait(400);
+
+                    document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
+                    document.getElementById('r1_um').innerText = "U";
+                    document.getElementById('r1_menor').innerText = "NO";
+                    document.getElementById('r1_meta').innerText = "50";
+                    await wait(500);
+                    document.getElementById('r1_real').innerText = "50";
+                    await wait(200);
+
+                    document.getElementById('r1_av').innerText = "100.0 %";
+                    document.getElementById('r1_av').style.color = "#00b050";
+                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO DE RESULTADOS: 100.0%";
+                    document.getElementById('pill_cump').style.background = "#00b050";
+                    document.getElementById('ini_est').innerText = "🟢 En Tiempo";
+                    document.getElementById('ini_est').style.color = "#00b050";
+
+                    await wait(3800);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=340)
+
+def animacion_gantt_tareas_realista():
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
+        .grid-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; }
+        th { background-color: #002060 !important; color: #ffffff !important; font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 8px 6px; }
+        td { padding: 8px 6px; border: 1px solid #e2e8f0; text-align: center; color: #1e293b; }
+        .td-left { text-align: left; }
+        .gantt-container { margin-top: 15px; padding-top: 10px; border-top: 2px dashed #e2e8f0; }
+        .gantt-row { display: flex; align-items: center; margin-bottom: 7px; font-size: 11.5px; font-weight: 700; color: #334155; }
+        .gantt-label { width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .gantt-track { flex: 1; background: #f1f5f9; height: 18px; border-radius: 4px; position: relative; overflow: hidden; }
+        .gantt-bar { height: 100%; border-radius: 4px; transition: all 0.5s; position: absolute; }
+    </style>
+    </head>
+    <body>
+        <div class="grid-box">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 10%;">Jerarquía</th>
+                        <th style="width: 32%;">Tarea</th>
+                        <th style="width: 14%;">Responsable</th>
+                        <th style="width: 12%;">Inicio</th>
+                        <th style="width: 12%;">Fin</th>
+                        <th style="width: 8%;">Comp.</th>
+                        <th style="width: 12%;">Estatus</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td><strong>1.</strong></td>
+                        <td class="td-left">Definición de requerimientos</td>
+                        <td>Ana</td>
+                        <td>01 Feb</td>
+                        <td>12 Feb</td>
+                        <td><input type="checkbox" checked disabled></td>
+                        <td style="color:#00b050; font-weight:800;">🟢 A tiempo</td>
+                    </tr>
+                    <tr>
+                        <td><strong>1.1</strong></td>
+                        <td class="td-left">Pruebas en ambiente QA</td>
+                        <td>Luis</td>
+                        <td>14 Feb</td>
+                        <td>25 Feb</td>
+                        <td><input type="checkbox" id="chk2"></td>
+                        <td id="st2" style="font-weight:800; color:#ff0000;">🔴 Retrasado</td>
+                    </tr>
+                </tbody>
+            </table>
+
+            <div class="gantt-container">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:8px; text-transform:uppercase;">Visualización Gantt Automatizada</div>
+                <div class="gantt-row">
+                    <div class="gantt-label">1. Requerimientos</div>
+                    <div class="gantt-track"><div class="gantt-bar" style="left:5%; width:35%; background:#002060;"></div></div>
+                </div>
+                <div class="gantt-row">
+                    <div class="gantt-label">1.1 Pruebas QA</div>
+                    <div class="gantt-track"><div id="bar2" class="gantt-bar" style="left:45%; width:40%; background:#a0aabf;"></div></div>
+                </div>
             </div>
         </div>
-    </div>
-    <script>
-        const wait = ms => new Promise(r => setTimeout(r, ms));
-        async function run() {
-            while(true) {
-                document.getElementById('in_r').innerText = "79"; document.getElementById('out_r').innerText = "Menor o igual a 79%"; document.getElementById('out_a').innerText = "De 80% a 89%"; await wait(1500);
-                document.getElementById('in_r').innerText = ""; document.getElementById('in_r').innerText = "6"; await wait(200); document.getElementById('in_r').innerText = "65"; await wait(400);
-                document.getElementById('out_r').innerText = "Menor o igual a 65%"; document.getElementById('out_a').innerText = "De 66% a 89%"; await wait(3000);
-            }
-        } run();
-    </script>
-    """
-    components.html(html_code, height=130)
 
-def animacion_botones():
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('chk2').checked = false;
+                    document.getElementById('st2').innerText = "🔴 Retrasado";
+                    document.getElementById('st2').style.color = "#ff0000";
+                    document.getElementById('bar2').style.background = "#a0aabf";
+                    await wait(2000);
+
+                    // Simula clic de usuario completando tarea
+                    document.getElementById('chk2').checked = true;
+                    await wait(300);
+                    document.getElementById('st2').innerText = "🟢 A tiempo";
+                    document.getElementById('st2').style.color = "#00b050";
+                    document.getElementById('bar2').style.background = "#002060";
+                    await wait(3500);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=250)
+
+def animacion_recursos_realista():
     html_code = """
-    <div style="display:flex; justify-content:center; align-items:center; height:100px; font-family:sans-serif;">
-        <div id="btn" style="background:#002060; color:white; padding:10px 20px; border-radius:8px; font-weight:bold; cursor:pointer; transition:all 0.2s;">➕ Añadir Iniciativa</div>
-    </div>
-    <script>
-        const wait = ms => new Promise(r => setTimeout(r, ms));
-        async function run() {
-            while(true) {
-                document.getElementById('btn').style.transform = "scale(1)"; document.getElementById('btn').style.background = "#002060"; await wait(1500);
-                document.getElementById('btn').style.transform = "scale(0.95)"; document.getElementById('btn').style.background = "#334c80"; await wait(200);
-                document.getElementById('btn').style.transform = "scale(1)"; document.getElementById('btn').style.background = "#002060"; await wait(3000);
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
+        .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        .box { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
+        .label { font-size: 11px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;}
+        .area-mock { height: 50px; font-size: 12.5px; color: #334155; line-height: 1.3; }
+        .cursor { display: inline-block; width: 2px; height: 13px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+    </head>
+    <body>
+        <div class="grid-2x2">
+            <div class="box">
+                <div class="label">TALENTO</div>
+                <div class="area-mock"><span id="txt_tal"></span><span id="c_tal" class="cursor"></span></div>
+            </div>
+            <div class="box">
+                <div class="label">PRESUPUESTO $</div>
+                <div class="area-mock"><span id="txt_pre"></span><span id="c_pre" class="cursor" style="display:none;"></span></div>
+            </div>
+            <div class="box">
+                <div class="label">INFRAESTRUCTURA</div>
+                <div class="area-mock"><span id="txt_inf"></span><span id="c_inf" class="cursor" style="display:none;"></span></div>
+            </div>
+            <div class="box">
+                <div class="label">TECNOLOGÍA</div>
+                <div class="area-mock"><span id="txt_tec"></span><span id="c_tec" class="cursor" style="display:none;"></span></div>
+            </div>
+        </div>
+
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function type(id, curId, text, speed=30) {
+                const el = document.getElementById(id);
+                const cur = document.getElementById(curId);
+                if(cur) cur.style.display = "inline-block";
+                el.innerText = "";
+                for(let i=0; i<text.length; i++) {
+                    el.innerText += text[i];
+                    await wait(speed);
+                }
+                if(cur) cur.style.display = "none";
             }
-        } run();
-    </script>
+            async function loop() {
+                while(true) {
+                    document.getElementById('txt_tal').innerText = "";
+                    document.getElementById('txt_pre').innerText = "";
+                    document.getElementById('txt_inf').innerText = "";
+                    document.getElementById('txt_tec').innerText = "";
+                    await wait(600);
+
+                    await type('txt_tal', 'c_tal', '1 Tech Lead, 2 Desarrolladores FullStack, 1 Analista QA', 25);
+                    await wait(200);
+                    await type('txt_pre', 'c_pre', '$180,000 MXN para licencias y consultoría externa', 25);
+                    await wait(200);
+                    await type('txt_inf', 'c_inf', 'Ambientes AWS (Staging / Producción), VPN corporativa', 25);
+                    await wait(200);
+                    await type('txt_tec', 'c_tec', 'Docker, GitHub Enterprise, Supabase Cloud, Sentry', 25);
+                    await wait(3500);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
     """
-    components.html(html_code, height=120)
+    components.html(html_code, height=180)
 
-# --- SINCRONIZADOR DE EDICIONES ACTIVAS ---
-def commit_live_edits():
-    for q in trimestres.keys():
-        if f"live_kpi_{q}" in st.session_state:
-            set_store(f"df_kpi_{q}", st.session_state[f"live_kpi_{q}"])
-        num_i = int(get_store(f"num_iniciativas_{q}", 1))
-        for i in range(1, num_i + 1):
-            if f"live_out_{q}_{i}" in st.session_state:
-                set_store(f"df_outputs_{q}_{i}", st.session_state[f"live_out_{q}_{i}"])
-            if f"live_tar_{q}_{i}" in st.session_state:
-                set_store(f"df_tareas_{q}_{i}", st.session_state[f"live_tar_{q}_{i}"])
+def animacion_intervalos_realista():
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
+        .flex-box { display: flex; gap: 15px; align-items: center; }
+        .inputs-col { flex: 1.1; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; }
+        .view-col { flex: 1.4; display: flex; flex-direction: column; gap: 6px; }
+        .lbl { font-size: 10.5px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 2px;}
+        .inp { border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; font-size: 12.5px; font-weight: bold; background:#f8fafc; margin-bottom: 8px;}
+        .ibox { border-radius: 6px; padding: 7px 12px; font-weight: 800; font-size: 11.5px; display: flex; justify-content: space-between; }
+    </style>
+    </head>
+    <body>
+        <div class="flex-box">
+            <div class="inputs-col">
+                <div class="lbl">Límite Rojo (%)</div>
+                <div class="inp" id="r_val">79</div>
+                <div class="lbl">Límite Amarillo (%)</div>
+                <div class="inp" id="a_val">89</div>
+                <div class="lbl">Límite Verde (%)</div>
+                <div class="inp" id="v_val">100</div>
+            </div>
+            <div class="view-col">
+                <div class="ibox" style="background:#ff0000; color:white;"><span>🔴 BAJO</span><span id="txt_r">Menor o igual a 79%</span></div>
+                <div class="ibox" style="background:#ffff00; color:black;"><span>🟡 MEDIO</span><span id="txt_a">De 80% a 89%</span></div>
+                <div class="ibox" style="background:#92d050; color:white;"><span>🟢 META</span><span id="txt_v">De 90% a 100%</span></div>
+                <div class="ibox" style="background:#00b050; color:white;"><span>🟢 SÚPER VERDE</span><span id="txt_sv">Mayor a 100%</span></div>
+            </div>
+        </div>
 
-# --- GENERADOR DUMMY (ACTUALIZADO A NUEVA ARQUITECTURA) ---
-def generar_dummy_onetest():
-    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-    cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
-    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('r_val').innerText = "79";
+                    document.getElementById('txt_r').innerText = "Menor o igual a 79%";
+                    document.getElementById('txt_a').innerText = "De 80% a 89%";
+                    await wait(1800);
 
-    set_store("ui_p_kpis", 50.0)
-    set_store("ui_p_okrs", 50.0)
-    set_store("cfg_corte_rojo", 79.0)
-    set_store("cfg_corte_amarillo", 89.0)
-    set_store("cfg_corte_verde", 100.0)
+                    // Cambia punto de corte en vivo
+                    document.getElementById('r_val').innerText = "69";
+                    document.getElementById('txt_r').innerText = "Menor o igual a 69%";
+                    document.getElementById('txt_a').innerText = "De 70% a 89%";
+                    await wait(3500);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=170)
 
-    for q_name, meses in trimestres.items():
-        cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
-        for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
-        df_k = pd.DataFrame(columns=cols_kpi)
-        
-        row1 = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0]
-        for _ in meses: row1.extend([166666.0, 166666.0 * mult_q[q_name], "⚪"])
-        df_k.loc[1] = row1
+def animacion_consolidacion_anual_realista():
+    html_code = """
+    <!DOCTYPE html>
+    <html>
+    <head>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
+        .row-cards { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; margin-bottom: 12px; }
+        .card-mini { background: #ffffff; border-radius: 8px; padding: 12px; text-align: center; border-top: 4px solid #002060; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
+        .title { font-size: 11px; font-weight: 900; color: #475569; text-transform: uppercase; margin-bottom: 3px; }
+        .val { font-size: 24px; font-weight: 900; }
+        table { width: 100%; border-collapse: collapse; font-size: 12px; background: white; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0; }
+        th { background: #002060; color: white; padding: 7px; font-size: 11px; text-align: center; }
+        td { border: 1px solid #e2e8f0; padding: 7px; text-align: center; }
+    </style>
+    </head>
+    <body>
+        <div class="row-cards">
+            <div class="card-mini" id="c_kpi" style="background:#92d050; color:white;">
+                <div class="title" style="color:white;">KPIs (50%)</div>
+                <div class="val" id="v_kpi">95 %</div>
+            </div>
+            <div class="card-mini" id="c_ini" style="background:#92d050; color:white;">
+                <div class="title" style="color:white;">Iniciativas (50%)</div>
+                <div class="val" id="v_ini">92 %</div>
+            </div>
+            <div class="card-mini" id="c_tot" style="background:#00b050; color:white;">
+                <div class="title" style="color:white;">Total ONE TRACK</div>
+                <div class="val" id="v_tot">94 %</div>
+            </div>
+        </div>
 
-        row2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
-        for _ in meses: row2.extend([95.0, 95.0 * mult_q[q_name], "⚪"])
-        df_k.loc[2] = row2
+        <table>
+            <thead><tr><th>Mes</th><th>KPIs (%)</th><th>Iniciativas (%)</th><th>Integrado (%)</th><th>Q</th><th>Resultado Q</th></tr></thead>
+            <tbody>
+                <tr><td><strong>Ene</strong></td><td>92% 🟢</td><td>88% 🟡</td><td>90% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td><strong>Feb</strong></td><td>96% 🟢</td><td>94% 🟢</td><td>95% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td><strong>Mar</strong></td><td>98% 🟢</td><td>95% 🟢</td><td>97% 🟢</td><td>Q1</td><td style="font-weight:bold; background:#f0fdf4;">94% 🟢</td></tr>
+            </tbody>
+        </table>
 
-        df_k = calcular_sem_kpis(df_k, meses, 79.0, 89.0, 100.0)
-        set_store(f"df_kpi_{q_name}", df_k)
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    await wait(2500);
+                    // Pulso visual que simula recálculo reactivo
+                    document.getElementById('v_tot').innerText = "94 %";
+                    await wait(2500);
+                }
+            }
+            loop();
+        </script>
+    </body>
+    </html>
+    """
+    components.html(html_code, height=220)
 
-    # Q1
-    q_n = "Q1"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
-    set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
-    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
-    df_o1 = pd.DataFrame(columns=cols_out)
-    df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
-    df_t1 = pd.DataFrame(columns=cols_t)
-    df_t1.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
-    df_t1.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True, ""]
-    df_t1.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t1))
-
-    # Q2
-    q_n = "Q2"; set_store(f"num_iniciativas_{q_n}", 2)
-    set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
-    set_store(f"ui_peso_{q_n}_1", 60.0)
-    set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
-    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
-    df_o2_1 = pd.DataFrame(columns=cols_out)
-    df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
-    df_t2_1 = pd.DataFrame(columns=cols_t)
-    df_t2_1.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
-    df_t2_1.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True, ""]
-    df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
-
-    set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
-    set_store(f"ui_peso_{q_n}_2", 40.0)
-    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
-    set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
-    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_2", "-")
-    set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
-    df_o2_2 = pd.DataFrame(columns=cols_out)
-    df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
-    set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
-    df_t2_2 = pd.DataFrame(columns=cols_t)
-    df_t2_2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
-    df_t2_2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False, ""]
-    df_t2_2.loc[3] = ["3.", "Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False, ""]
-    set_store(f"df_tareas_{q_n}_2", update_estatus_tareas(df_t2_2))
-
-    # Q3
-    q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
-    set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
-    df_o3 = pd.DataFrame(columns=cols_out)
-    df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
-    df_t3 = pd.DataFrame(columns=cols_t)
-    df_t3.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
-    df_t3.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False, ""]
-    df_t3.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t3))
-
-    # Q4
-    q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
-    set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
-    df_o4 = pd.DataFrame(columns=cols_out)
-    df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
-    df_t4 = pd.DataFrame(columns=cols_t)
-    df_t4.loc[1] = ["1.", "Revisión", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
-    df_t4.loc[2] = ["2.", "Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
-    df_t4.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t4))
-
-def ejecutar_dummy_callback():
-    for key in list(st.session_state.keys()):
-        if key.startswith("editor_") or key.startswith("ui_") or key.startswith("live_") or key.startswith("cfg_"):
-            del st.session_state[key]
-    generar_dummy_onetest()
-    guardar_en_bd()
-    set_store("datos_cargados", False)
-
-# --- CARGA INICIAL DESDE SUPABASE ---
+# --- CARGA INICIAL DESDE BD ---
 def init_okr_structure(q_name, i):
     if f"ui_nom_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_nom_{q_name}_{i}", "")
     if f"ui_obj_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_obj_{q_name}_{i}", "")
@@ -759,82 +1013,89 @@ st.write("")
 
 # --- RUTEO DE VISTAS ---
 if st.session_state.vista_actual == "Guía de Uso":
-    st.markdown("<div class='section-title'>📖 Guía de Uso Integral - ONE TRACK</div>", unsafe_allow_html=True)
+    st.markdown("<div class='section-title'>📖 Guía Integral de Uso - ONE TRACK Workspace</div>", unsafe_allow_html=True)
     st.markdown("""
-    Bienvenido al manual operativo de **ONE TRACK**. Esta herramienta estratégica está diseñada para cerrar la brecha entre la formulación de objetivos ejecutivos y su ejecución táctica en el día a día.
+    Esta guía te proporciona un recorrido detallado paso a paso para configurar, operar e interpretar cada sección de tu tablero estratégico. Todas las simulaciones a continuación replican el comportamiento real de la aplicación.
     """)
     
-    st.markdown("<div class='sub-section-title'>1. Filosofía ONE TRACK y Estructura Global</div>", unsafe_allow_html=True)
+    # 1. PONDERACIÓN
+    st.markdown("<div class='sub-section-title'>1. La Doble Ponderación en ONE TRACK</div>", unsafe_allow_html=True)
+    st.markdown("""
+    <div class='guide-callout'>
+        <strong>En ONE TRACK existen dos niveles de ponderación que debes equilibrar:</strong><br><br>
+        <strong>A) Ponderación Global (Frontal):</strong> Se ubica en la parte superior del tablero. Define qué peso tiene el resultado numérico del negocio (<strong>KPIs %</strong>) frente al avance de los proyectos estratégicos (<strong>Iniciativas %</strong>). La suma recomendada es <strong>100%</strong> (por ejemplo: 50% KPIs y 50% Iniciativas).<br><br>
+        <strong>B) Ponderación por Iniciativa (Trimestral):</strong> Dentro de cada trimestre (Q1, Q2, Q3, Q4), cada iniciativa cuenta con su propio campo de <strong>Ponderación (%)</strong>. La suma de las ponderaciones de todas las iniciativas de ese trimestre debe sumar exactamente <strong>100%</strong> (por ejemplo: si tienes 2 iniciativas en Q2, una puede pesar 60% y la otra 40%).
+    </div>
+    """, unsafe_allow_html=True)
+
+    # 2. TABLA KPIS
+    st.markdown("<div class='sub-section-title'>2. Configuración y Llenado de KPIs Mensuales</div>", unsafe_allow_html=True)
     st.write("""
-    ONE TRACK divide la gestión estratégica en dos grandes ejes balanceados:
-    * **Indicadores Clave de Desempeño (KPIs):** Miden el resultado final o desempeño cuantitativo del negocio (ventas, satisfacción, rentabilidad).
-    * **Iniciativas Estratégicas:** Miden la ejecución estructurada y los proyectos clave que mueven la aguja de dichos resultados.
-    * **Ponderación Global:** Permite asignar qué porcentaje del éxito general corresponde a los resultados numéricos de negocio y qué porcentaje a la ejecución disciplinada de proyectos.
+    Para ingresar un indicador clave de desempeño en la tabla:
+    1. **Nombre del KPI:** Escribe el nombre de la métrica (ej. *Ventas Nuevos Clientes*).
+    2. **Tipo de Cálculo:** 
+       - *Acumulado:* La meta anual se va alcanzando con la suma acumulativa de cada mes.
+       - *Promedio:* Para porcentajes o calificaciones de servicio (ej. NPS, Margen %).
+       - *Valor Final:* Solo importa el resultado puntual del último período medido.
+    3. **Meta y UM (Unidad de Medida):** Define el objetivo anual y la unidad (`$`, `U`, `%`, `Tiempo`).
+    4. **< Mejor (Menor es mejor):** Si marcas **SI**, la fórmula premia valores bajos (mermas, rotación, costos) invirtiendo el cálculo: $(\\text{Prog} / \\text{Real}) \\times 100$.
+    5. **Tríada Mensual (Prog - Real - Semáforo):** Captura lo programado y lo ejecutado. El círculo de semáforo (`●`) se proyecta automáticamente evaluando tu desempeño frente a los intervalos configurados.
     """)
-    
-    st.markdown("<div class='sub-section-title'>2. Indicadores Clave de Desempeño (KPIs)</div>", unsafe_allow_html=True)
+    animacion_kpis_realista()
+
+    # 3. INICIATIVAS Y RESULTADOS
+    st.markdown("<div class='sub-section-title'>3. Iniciativas Estratégicas y Resultados Cuantitativos</div>", unsafe_allow_html=True)
     st.write("""
-    En cada trimestre (Q1 a Q4) podrás planificar y registrar el avance de tus métricas:
-    * **Programado - Real - Semáforo:** Cada mes presenta una tríada de columnas. Al ingresar tus valores, la columna semáforo proyecta automáticamente un círculo de color (🔴, 🟡, 🟢) evaluando el nivel de cumplimiento del mes según tus intervalos configurados.
-    * **Tipo de Cálculo:** 
-        - *Acumulado:* Para métricas que suman mes a mes (e.g. Ventas, Nuevos Clientes).
-        - *Promedio:* Para porcentajes o calificaciones de servicio (e.g. CSAT, Margen %).
-        - *Valor Final:* Para metas puntuales de fin de ciclo.
-    * **< Mejor (Menor es Mejor):** Si seleccionas **SI**, la fórmula premia valores bajos (útil para rotación de personal, mermas o costos).
+    Cada iniciativa representa una apuesta táctica mayor para mover tus KPIs:
+    * **Nombre y Objetivo:** Describe la iniciativa y redacta un objetivo claro con alcance y fecha.
+    * **Ponderación (%):** Asigna el porcentaje que representa esta iniciativa dentro del total del trimestre.
+    * **Resultados de la Iniciativa:** A diferencia de las tareas del día a día, esta tabla define los **entregables cuantitativos de impacto** (ej. *Clientes B2B activos*). Al llenar la **Meta** y lo **Realizado**, el sistema calcula el **Avance %** de cada entregable y actualiza la tarjeta superior: **CUMPLIMIENTO DE RESULTADOS**.
     """)
-    animacion_kpis()
-    
-    st.markdown("<div class='sub-section-title'>3. Iniciativas Estratégicas y Resultados</div>", unsafe_allow_html=True)
-    st.write("""
-    Las iniciativas agrupan las grandes apuestas trimestrales:
-    * **Ponderación (%):** Define el peso de cada iniciativa sobre el total de iniciativas del trimestre.
-    * **Resultados de la Iniciativa:** Matriz donde desglosas los entregables cuantitativos de la iniciativa (Nombre, Unidad de Medida, Sentido menor mejor, Meta y Real). El sistema calcula en vivo el **Avance %** exacto de cada resultado y promedia el cumplimiento global.
-    * **Estatus Actual:** El semáforo general de la iniciativa evalúa automáticamente el estatus del cronograma de tareas (detectando si existen actividades en riesgo o retraso).
-    """)
-    animacion_resultados()
-    
+    animacion_iniciativa_completa_realista()
+
+    # 4. GANTT Y TAREAS
     st.markdown("<div class='sub-section-title'>4. Plan de Acción y Cronograma Gantt</div>", unsafe_allow_html=True)
     st.write("""
-    El motor de ejecución táctica:
-    * **Jerarquía Numérica:** Asigna numeraciones (e.g. `1.`, `1.1`, `1.2`) para que el cronograma ordene y agrupe las fases visualmente de forma automática.
-    * **Estatus Automático de Tarea:** Compara en tiempo real la fecha límite (`Fin`) contra la fecha del día de hoy. Si la actividad no está completada y ya venció, se marca como 🔴 Retrasado de forma inmediata.
-    * **Duración de la Iniciativa:** El sistema detecta la fecha de inicio más temprana y la fecha fin más tardía del plan para mostrar el rango total de ejecución.
+    El motor de seguimiento táctico de cada iniciativa:
+    * **Jerarquías:** Utiliza numeración formal (`1.`, `1.1`, `1.2`) para clasificar actividades principales y secundarias.
+    * **Estatus Automático:** El sistema compara la fecha de finalización (`Fin`) contra la fecha de hoy:
+      - Si la casilla **Completado** está marcada: **🟢 A tiempo**.
+      - Si la fecha límite ya venció y la casilla no está marcada: **🔴 Retrasado** automáticamente.
+    * **Gantt Visual:** El cronograma inferior dibuja las barras de duración en tiempo real.
     """)
-    animacion_gantt()
-    
-    st.markdown("<div class='sub-section-title'>5. Asignación y Control de Recursos</div>", unsafe_allow_html=True)
-    st.write("""
-    Cada iniciativa cuenta con una cuadrícula 2×2 para delimitar los recursos requeridos:
-    * **Talento:** Líderes de proyecto, personal interno y contrataciones clave requeridas.
-    * **Presupuesto $:** Fondos financieros específicos aprobados para licencias, consultorías o pauta.
-    * **Infraestructura:** Espacios físicos, bodegas, líneas telefónicas o ambientes de servidores.
-    * **Tecnología:** Herramientas de software, licencias, sistemas CRM o APIs indispensables.
-    """)
-    
-    st.markdown("<div class='sub-section-title'>6. Añadir o Quitar Iniciativas</div>", unsafe_allow_html=True)
-    st.write("""
-    Si necesitas más bloques de iniciativas para un trimestre específico:
-    * Ve al final de la página del trimestre y usa los botones **➕ Añadir Iniciativa** o **🗑️ Quitar Iniciativa**.
-    * *Nota:* Recuerda que las iniciativas de cada trimestre (Q1, Q2, etc.) son 100% independientes unas de otras.
-    """)
-    animacion_botones()
-    
-    st.markdown("<div class='sub-section-title'>7. Modificar Semáforos e Intervalos (Configuración)</div>", unsafe_allow_html=True)
-    st.write("""
-    Personaliza la escala de exigencia institucional sin solapamiento de porcentajes:
-    * **Rojo (Bajo):** Del 0% al corte inferior establecido.
-    * **Amarillo (Medio):** Intervalo de alerta intermedia.
-    * **Verde (Meta):** Intervalo de meta aprobada institucional.
-    * **Súper Verde (Sobresaliente):** Rendimientos superiores a la meta fijada.
-    """)
-    animacion_semaforos()
+    animacion_gantt_tareas_realista()
 
-    st.markdown("<div class='sub-section-title'>8. Resumen Anual y Análisis de Tendencias</div>", unsafe_allow_html=True)
+    # 5. RECURSOS 2X2
+    st.markdown("<div class='sub-section-title'>5. Recursos Requeridos para la Iniciativa (Cuadrícula 2×2)</div>", unsafe_allow_html=True)
     st.write("""
-    Vista gerencial consolidada:
-    * Muestra la tabla anual con el porcentaje y el círculo de desempeño de cada métrica a lo largo de los 12 meses.
-    * Gráfico de líneas mensual para contrastar el comportamiento de los KPIs de negocio contra el ritmo de ejecución de las iniciativas.
+    Al pie de cada iniciativa, dispones de 4 bloques para asegurar la viabilidad del proyecto antes de arrancar:
+    * **Talento:** Perfiles, roles, contrataciones clave o consultores asignados al proyecto.
+    * **Presupuesto $:** Fondos específicos aprobados para licenciamiento, viáticos o pauta.
+    * **Infraestructura:** Oficinas, almacenes, servidores o equipamiento físico necesario.
+    * **Tecnología:** Softwares, APIs, accesos a bases de datos o plataformas requeridas.
     """)
+    animacion_recursos_realista()
+
+    # 6. SEMAFORIZACIÓN CONTINUA
+    st.markdown("<div class='sub-section-title'>6. Parámetros de Semáforo (Intervalos Continuos)</div>", unsafe_allow_html=True)
+    st.write("""
+    En la pestaña **Configuración de ONE Track**, ajustas los 3 cortes porcentuales institucionales. El sistema genera rangos continuos matemáticamente consistentes sin solapamientos:
+    * **🔴 Bajo (Rojo):** Rendimientos iguales o menores al primer límite (ej. $\\le 79\\%$).
+    * **🟡 Medio (Amarillo):** Rendimientos en el rango de alerta (ej. $80\\%$ a $89\\%$).
+    * **🟢 Meta (Verde):** Rendimientos que cumplen la meta aprobada (ej. $90\\%$ a $100\\%$).
+    * **🟢 Sobresaliente (Súper Verde):** Rendimientos por encima del $100\\%$.
+    """)
+    animacion_intervalos_realista()
+
+    # 7. TABLERO ANUAL
+    st.markdown("<div class='sub-section-title'>7. Consolidación de Resultados y Tablero Anual</div>", unsafe_allow_html=True)
+    st.write("""
+    En la pestaña **Resumen Anual**, la plataforma consolida la totalidad del año fiscal:
+    * La fórmula multiplica el avance de KPIs y de Iniciativas por sus ponderaciones globales para entregar el **Total ONE TRACK**.
+    * La tabla anual despliega cada mes con su porcentaje y su círculo evaluador correspondiente.
+    * El gráfico de tendencias compara mes con mes la curva de resultados de negocio frente al ritmo de avance de proyectos.
+    """)
+    animacion_consolidacion_anual_realista()
 
 elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vista_actual == "Resumen Anual":
     
@@ -1083,7 +1344,6 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
     if st.session_state.vista_actual == "Resumen Anual":
         st.markdown("<div class='section-title'>Resumen Anual del Desempeño</div>", unsafe_allow_html=True)
         
-        # Generar tabla anual con círculos de semáforo
         df_anual_view = pd.DataFrame()
         df_anual_view["Mes"] = df_anual["Mes"]
         df_anual_view["KPIs (%)"] = df_anual["Indicadores Clave de Desempeño (KPIs)"].apply(lambda x: f"{x:.0%}")
