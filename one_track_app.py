@@ -56,7 +56,7 @@ def init_db():
 
 init_db()
 
-# --- BÓVEDA PERMANENTE DE ESTADO (PERSISTENCIA Y CERO DOBLE INPUT) ---
+# --- BÓVEDA PERMANENTE DE ESTADO Y SINCRONIZADOR GLOBAL ---
 if "perm_store" not in st.session_state:
     st.session_state.perm_store = {}
 
@@ -65,6 +65,17 @@ def get_store(key, default=None):
 
 def set_store(key, val):
     st.session_state.perm_store[key] = val
+
+def commit_live_edits():
+    for q in trimestres.keys():
+        if f"live_kpi_{q}" in st.session_state:
+            set_store(f"df_kpi_{q}", st.session_state[f"live_kpi_{q}"])
+        num_i = int(get_store(f"num_iniciativas_{q}", 1) or 1)
+        for i in range(1, num_i + 1):
+            if f"live_out_{q}_{i}" in st.session_state:
+                set_store(f"df_outputs_{q}_{i}", st.session_state[f"live_out_{q}_{i}"])
+            if f"live_tar_{q}_{i}" in st.session_state:
+                set_store(f"df_tareas_{q}_{i}", st.session_state[f"live_tar_{q}_{i}"])
 
 def bind_text_input(label, key, default=""):
     if key not in st.session_state:
@@ -197,729 +208,377 @@ def dibujar_gantt(df_tareas):
     ).properties(height=alt.Step(40))
     st.altair_chart(chart, use_container_width=True)
 
-# ==============================================================================
-# 🎬 SIMULACIONES INTERACTIVAS REALISTAS (HTML5 / CSS / JS)
-# ==============================================================================
-
+# --- SIMULACIONES REALISTAS (HTML5 / CSS / JS) ---
 def animacion_kpis_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
-        .grid-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-        table { width: 100%; border-collapse: collapse; font-size: 13px; }
-        th { background-color: #002060 !important; color: #ffffff !important; font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 10px 8px; border: 1px solid #1e3a8a;}
-        td { padding: 9px 8px; border: 1px solid #e2e8f0; text-align: center; color: #1e293b; background: #ffffff;}
-        .td-left { text-align: left; font-weight: 600; }
-        .cell-active { background-color: #f1f5f9; outline: 2px solid #002060; outline-offset: -2px; }
-        .select-pill { background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 4px; padding: 3px 6px; font-size: 11px; font-weight: bold; }
-        .cursor { display: inline-block; width: 2px; height: 14px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    </style>
-    </head>
-    <body>
-        <div class="grid-box">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 25%;">KPI</th>
-                        <th style="width: 10%;">Tipo</th>
-                        <th style="width: 9%;">Meta</th>
-                        <th style="width: 7%;">UM</th>
-                        <th style="width: 7%;">< Mejor</th>
-                        <th style="width: 8%;">Peso %</th>
-                        <th style="width: 11%;">Ene Prog</th>
-                        <th style="width: 11%;">Ene Real</th>
-                        <th style="width: 12%;">Ene Semáforo</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td class="td-left"><span id="kpi_nombre"></span><span id="c_nom" class="cursor"></span></td>
-                        <td><span class="select-pill" id="kpi_tipo">Acumulado</span></td>
-                        <td id="kpi_meta"></td>
-                        <td><span class="select-pill" id="kpi_um">$</span></td>
-                        <td><span class="select-pill" id="kpi_menor">NO</span></td>
-                        <td id="kpi_peso"></td>
-                        <td id="kpi_p1"></td>
-                        <td id="kpi_r1" style="font-weight: 600;"></td>
-                        <td id="kpi_sem" style="font-size: 16px;">⚪</td>
-                    </tr>
-                </tbody>
-            </table>
-        </div>
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function type(id, curId, text, speed=40) {
-                const el = document.getElementById(id);
-                const cur = document.getElementById(curId);
-                if(cur) cur.style.display = "inline-block";
-                el.innerText = "";
-                for(let i=0; i<text.length; i++) {
-                    el.innerText += text[i];
-                    await wait(speed);
-                }
-                if(cur) cur.style.display = "none";
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); font-family: sans-serif;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead><tr>
+                <th style="background:#002060; color:white; padding:10px 8px; width:25%; text-align:left;">KPI</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:10%;">Tipo</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:9%;">Meta</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:7%;">UM</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:7%;">< Mejor</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:8%;">Peso %</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:11%;">Ene Prog</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:11%;">Ene Real</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:12%;">Ene Semáforo</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td style="padding:9px 8px; text-align:left; border:1px solid #e2e8f0; font-weight:600;"><span id="kpi_nombre"></span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">Acumulado</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_meta"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">$</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">NO</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_peso"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_p1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-weight:600;" id="kpi_r1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-size:16px;" id="kpi_sem">⚪</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('kpi_nombre').innerText = ""; document.getElementById('kpi_meta').innerText = "";
+                document.getElementById('kpi_peso').innerText = ""; document.getElementById('kpi_p1').innerText = "";
+                document.getElementById('kpi_r1').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪";
+                await wait(800);
+                let t = "Ventas Nuevos Clientes";
+                for(let i=0; i<t.length; i++) { document.getElementById('kpi_nombre').innerText += t[i]; await wait(40); }
+                await wait(300); document.getElementById('kpi_meta').innerText = "500,000";
+                await wait(300); document.getElementById('kpi_peso').innerText = "50 %";
+                await wait(400); document.getElementById('kpi_p1').innerText = "40,000";
+                await wait(400); document.getElementById('kpi_r1').innerText = "42,500";
+                await wait(300); document.getElementById('kpi_sem').innerText = "🟢";
+                await wait(3500);
             }
-            async function loop() {
-                while(true) {
-                    document.getElementById('kpi_nombre').innerText = "";
-                    document.getElementById('kpi_meta').innerText = "";
-                    document.getElementById('kpi_peso').innerText = "";
-                    document.getElementById('kpi_p1').innerText = "";
-                    document.getElementById('kpi_r1').innerText = "";
-                    document.getElementById('kpi_sem').innerText = "⚪";
-                    await wait(800);
-
-                    await type('kpi_nombre', 'c_nom', 'Ventas Nuevos Clientes', 45);
-                    await wait(300);
-                    document.getElementById('kpi_meta').innerText = "500,000";
-                    await wait(300);
-                    document.getElementById('kpi_peso').innerText = "50 %";
-                    await wait(400);
-
-                    document.getElementById('kpi_p1').innerText = "40,000";
-                    await wait(400);
-                    document.getElementById('kpi_r1').innerText = "42,500";
-                    await wait(300);
-
-                    document.getElementById('kpi_sem').innerText = "🟢";
-                    await wait(3500);
-                }
-            }
-            loop();
-        </script>
-    </body>
-    </html>
+        } loop();
+    </script>
     """
-    components.html(html_code, height=140)
+    components.html(html_code, height=135)
 
 def animacion_iniciativa_completa_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 12px; background: transparent; }
-        .card { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
-        .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
-        .badge { background: #002060; color: #fff; padding: 8px 16px; border-radius: 8px; font-weight: 900; font-size: 15px; }
-        .pill-res { padding: 8px 15px; border-radius: 6px; font-weight: 900; font-size: 13px; color: white; background: #64748b; transition: all 0.3s; }
-        .grid-3 { display: grid; grid-template-columns: 3fr 1fr 1fr; gap: 12px; margin-bottom: 12px; }
-        .label { font-size: 11px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 4px; letter-spacing: 0.5px;}
-        .mock-input { height: 36px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 0 10px; display: flex; align-items: center; font-size: 13px; color: #1e293b; background: #fff; box-sizing: border-box; }
-        .mock-area { height: 60px; border: 1px solid #cbd5e1; border-radius: 6px; padding: 8px 10px; font-size: 13px; color: #1e293b; background: #fff; box-sizing: border-box; line-height: 1.4; margin-bottom: 15px;}
-        table { width: 100%; border-collapse: collapse; font-size: 12.5px; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0;}
-        th { background: #002060; color: #fff; padding: 8px 10px; text-align: center; font-size: 11px; text-transform: uppercase; }
-        td { border: 1px solid #e2e8f0; padding: 8px 10px; text-align: center; }
-        .cursor { display: inline-block; width: 2px; height: 14px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    </style>
-    </head>
-    <body>
-        <div class="card">
-            <div class="header">
-                <div class="badge">Iniciativa #1</div>
-                <div id="pill_cump" class="pill-res">CUMPLIMIENTO DE RESULTADOS: 0.0%</div>
-            </div>
-            <div class="grid-3">
-                <div>
-                    <div class="label">NOMBRE DE LA INICIATIVA</div>
-                    <div class="mock-input"><span id="ini_nom"></span><span id="c_nom" class="cursor"></span></div>
-                </div>
-                <div>
-                    <div class="label">PONDERACIÓN (%)</div>
-                    <div class="mock-input" id="ini_peso" style="justify-content:center; font-weight:bold;"></div>
-                </div>
-                <div>
-                    <div class="label">ESTATUS ACTUAL</div>
-                    <div class="mock-input" id="ini_est" style="justify-content:center; font-weight:bold; color:#64748b;">⚪ Sin Tareas</div>
-                </div>
-            </div>
-            <div class="label">OBJETIVO</div>
-            <div class="mock-area" id="ini_obj"></div>
-
-            <div class="label" style="margin-top: 10px; margin-bottom: 8px;">RESULTADOS DE LA INICIATIVA (MÉTRICAS DIRECTAS)</div>
-            <table>
-                <thead>
-                    <tr>
-                        <th style="text-align:left; width:40%;">Nombre del Resultado</th>
-                        <th>UM</th>
-                        <th>< Mejor</th>
-                        <th>Meta</th>
-                        <th>Real</th>
-                        <th>Avance %</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td style="text-align:left;" id="r1_nom">-</td>
-                        <td id="r1_um">-</td>
-                        <td id="r1_menor">-</td>
-                        <td id="r1_meta">-</td>
-                        <td id="r1_real">-</td>
-                        <td id="r1_av" style="font-weight:900;">-</td>
-                    </tr>
-                </tbody>
-            </table>
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; font-family: sans-serif;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="background:#002060; color:white; padding:8px 16px; border-radius:8px; font-weight:900;">Iniciativa #1</div>
+            <div id="pill_cump" style="padding:8px 15px; border-radius:6px; font-weight:900; font-size:13px; color:white; background:#64748b;">CUMPLIMIENTO: 0.0%</div>
         </div>
-
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function type(id, curId, text, speed=35) {
-                const el = document.getElementById(id);
-                const cur = document.getElementById(curId);
-                if(cur) cur.style.display = "inline-block";
-                el.innerText = "";
-                for(let i=0; i<text.length; i++) {
-                    el.innerText += text[i];
-                    await wait(speed);
-                }
-                if(cur) cur.style.display = "none";
+        <div style="display:grid; grid-template-columns:3fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">NOMBRE</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; display:flex; align-items:center;" id="ini_nom"></div></div>
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PONDERACIÓN (%)</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold;" id="ini_peso"></div></div>
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">ESTATUS</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#64748b;" id="ini_est">⚪ Sin Tareas</div></div>
+        </div>
+        <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">OBJETIVO</div>
+        <div style="height:55px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:12.5px; line-height:1.3; margin-bottom:12px;" id="ini_obj"></div>
+        <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e2e8f0;">
+            <thead><tr style="background:#002060; color:white;"><th style="padding:6px; text-align:left;">Resultado</th><th>UM</th><th>Meta</th><th>Real</th><th>Avance %</th></tr></thead>
+            <tbody><tr><td style="padding:6px;" id="r1_nom">-</td><td style="padding:6px; text-align:center;" id="r1_um">-</td><td style="padding:6px; text-align:center;" id="r1_meta">-</td><td style="padding:6px; text-align:center;" id="r1_real">-</td><td style="padding:6px; text-align:center; font-weight:bold;" id="r1_av">-</td></tr></tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('ini_nom').innerText = ""; document.getElementById('ini_peso').innerText = "";
+                document.getElementById('ini_obj').innerText = ""; document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
+                document.getElementById('ini_est').style.color = "#64748b"; document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 0.0%";
+                document.getElementById('pill_cump').style.background = "#64748b"; document.getElementById('r1_nom').innerText = "-";
+                document.getElementById('r1_um').innerText = "-"; document.getElementById('r1_meta').innerText = "-";
+                document.getElementById('r1_real').innerText = "-"; document.getElementById('r1_av').innerText = "-";
+                document.getElementById('r1_av').style.color = "black";
+                await wait(800);
+                let t = "Lanzamiento de Plataforma B2B";
+                for(let i=0; i<t.length; i++) { document.getElementById('ini_nom').innerText += t[i]; await wait(30); }
+                await wait(200); document.getElementById('ini_peso').innerText = "60.0";
+                await wait(200); document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
+                await wait(400); document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
+                document.getElementById('r1_um').innerText = "U"; document.getElementById('r1_meta').innerText = "50";
+                await wait(400); document.getElementById('r1_real').innerText = "50";
+                await wait(200); document.getElementById('r1_av').innerText = "100.0 %";
+                document.getElementById('r1_av').style.color = "#00b050";
+                document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 100.0%";
+                document.getElementById('pill_cump').style.background = "#00b050";
+                document.getElementById('ini_est').innerText = "🟢 En Tiempo";
+                document.getElementById('ini_est').style.color = "#00b050";
+                await wait(3500);
             }
-            async function loop() {
-                while(true) {
-                    document.getElementById('ini_nom').innerText = "";
-                    document.getElementById('ini_peso').innerText = "";
-                    document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
-                    document.getElementById('ini_est').style.color = "#64748b";
-                    document.getElementById('ini_obj').innerText = "";
-                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO DE RESULTADOS: 0.0%";
-                    document.getElementById('pill_cump').style.background = "#64748b";
-
-                    document.getElementById('r1_nom').innerText = "-";
-                    document.getElementById('r1_um').innerText = "-";
-                    document.getElementById('r1_menor').innerText = "-";
-                    document.getElementById('r1_meta').innerText = "-";
-                    document.getElementById('r1_real').innerText = "-";
-                    document.getElementById('r1_av').innerText = "-";
-                    document.getElementById('r1_av').style.color = "black";
-                    await wait(800);
-
-                    await type('ini_nom', 'c_nom', 'Lanzamiento de Plataforma B2B', 35);
-                    await wait(200);
-                    document.getElementById('ini_peso').innerText = "60.0";
-                    await wait(300);
-                    document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
-                    await wait(400);
-
-                    document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
-                    document.getElementById('r1_um').innerText = "U";
-                    document.getElementById('r1_menor').innerText = "NO";
-                    document.getElementById('r1_meta').innerText = "50";
-                    await wait(500);
-                    document.getElementById('r1_real').innerText = "50";
-                    await wait(200);
-
-                    document.getElementById('r1_av').innerText = "100.0 %";
-                    document.getElementById('r1_av').style.color = "#00b050";
-                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO DE RESULTADOS: 100.0%";
-                    document.getElementById('pill_cump').style.background = "#00b050";
-                    document.getElementById('ini_est').innerText = "🟢 En Tiempo";
-                    document.getElementById('ini_est').style.color = "#00b050";
-
-                    await wait(3800);
-                }
-            }
-            loop();
-        </script>
-    </body>
-    </html>
+        } loop();
+    </script>
     """
-    components.html(html_code, height=340)
+    components.html(html_code, height=330)
 
 def animacion_gantt_tareas_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
-        .grid-box { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.06); }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; }
-        th { background-color: #002060 !important; color: #ffffff !important; font-size: 11px; font-weight: 900; text-transform: uppercase; text-align: center; padding: 8px 6px; }
-        td { padding: 8px 6px; border: 1px solid #e2e8f0; text-align: center; color: #1e293b; }
-        .td-left { text-align: left; }
-        .gantt-container { margin-top: 15px; padding-top: 10px; border-top: 2px dashed #e2e8f0; }
-        .gantt-row { display: flex; align-items: center; margin-bottom: 7px; font-size: 11.5px; font-weight: 700; color: #334155; }
-        .gantt-label { width: 150px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .gantt-track { flex: 1; background: #f1f5f9; height: 18px; border-radius: 4px; position: relative; overflow: hidden; }
-        .gantt-bar { height: 100%; border-radius: 4px; transition: all 0.5s; position: absolute; }
-    </style>
-    </head>
-    <body>
-        <div class="grid-box">
-            <table>
-                <thead>
-                    <tr>
-                        <th style="width: 10%;">Jerarquía</th>
-                        <th style="width: 32%;">Tarea</th>
-                        <th style="width: 14%;">Responsable</th>
-                        <th style="width: 12%;">Inicio</th>
-                        <th style="width: 12%;">Fin</th>
-                        <th style="width: 8%;">Comp.</th>
-                        <th style="width: 12%;">Estatus</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr>
-                        <td><strong>1.</strong></td>
-                        <td class="td-left">Definición de requerimientos</td>
-                        <td>Ana</td>
-                        <td>01 Feb</td>
-                        <td>12 Feb</td>
-                        <td><input type="checkbox" checked disabled></td>
-                        <td style="color:#00b050; font-weight:800;">🟢 A tiempo</td>
-                    </tr>
-                    <tr>
-                        <td><strong>1.1</strong></td>
-                        <td class="td-left">Pruebas en ambiente QA</td>
-                        <td>Luis</td>
-                        <td>14 Feb</td>
-                        <td>25 Feb</td>
-                        <td><input type="checkbox" id="chk2"></td>
-                        <td id="st2" style="font-weight:800; color:#ff0000;">🔴 Retrasado</td>
-                    </tr>
-                </tbody>
-            </table>
-
-            <div class="gantt-container">
-                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:8px; text-transform:uppercase;">Visualización Gantt Automatizada</div>
-                <div class="gantt-row">
-                    <div class="gantt-label">1. Requerimientos</div>
-                    <div class="gantt-track"><div class="gantt-bar" style="left:5%; width:35%; background:#002060;"></div></div>
-                </div>
-                <div class="gantt-row">
-                    <div class="gantt-label">1.1 Pruebas QA</div>
-                    <div class="gantt-track"><div id="bar2" class="gantt-bar" style="left:45%; width:40%; background:#a0aabf;"></div></div>
-                </div>
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; font-family: sans-serif; font-size: 12px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: #002060; color: white;">
+                <th style="padding: 7px;">Jerarquía</th><th style="padding: 7px; text-align: left;">Tarea</th><th>Responsable</th><th>Fin</th><th>Comp.</th><th>Estatus</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.</td>
+                    <td style="padding:7px; border:1px solid #e2e8f0;">Requerimientos funcionales</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Ana</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">12 Feb</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" checked disabled></td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; color:#00b050; font-weight:bold;">🟢 A tiempo</td>
+                </tr>
+                <tr>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.1</td>
+                    <td style="padding:7px; border:1px solid #e2e8f0;">Pruebas QA en servidor</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Luis</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">25 Feb</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" id="chk2"></td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; font-weight:bold; color:#ff0000;" id="st2">🔴 Retrasado</td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="margin-top:12px; padding-top:8px; border-top:2px dashed #e2e8f0;">
+            <div style="display:flex; align-items:center; margin-bottom:5px;">
+                <div style="width:130px; font-weight:bold;">1. Requerimientos</div>
+                <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div style="width:40%; height:100%; background:#002060; border-radius:4px;"></div></div>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <div style="width:130px; font-weight:bold;">1.1 Pruebas QA</div>
+                <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div id="bar2" style="left:40%; width:45%; height:100%; background:#a0aabf; border-radius:4px; position:absolute;"></div></div>
             </div>
         </div>
-
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function loop() {
-                while(true) {
-                    document.getElementById('chk2').checked = false;
-                    document.getElementById('st2').innerText = "🔴 Retrasado";
-                    document.getElementById('st2').style.color = "#ff0000";
-                    document.getElementById('bar2').style.background = "#a0aabf";
-                    await wait(2000);
-
-                    // Simula clic de usuario completando tarea
-                    document.getElementById('chk2').checked = true;
-                    await wait(300);
-                    document.getElementById('st2').innerText = "🟢 A tiempo";
-                    document.getElementById('st2').style.color = "#00b050";
-                    document.getElementById('bar2').style.background = "#002060";
-                    await wait(3500);
-                }
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('chk2').checked = false; document.getElementById('st2').innerText = "🔴 Retrasado";
+                document.getElementById('st2').style.color = "#ff0000"; document.getElementById('bar2').style.background = "#a0aabf";
+                await wait(2000);
+                document.getElementById('chk2').checked = true; await wait(300);
+                document.getElementById('st2').innerText = "🟢 A tiempo"; document.getElementById('st2').style.color = "#00b050";
+                document.getElementById('bar2').style.background = "#002060"; await wait(3500);
             }
-            loop();
-        </script>
-    </body>
-    </html>
+        } loop();
+    </script>
     """
-    components.html(html_code, height=250)
+    components.html(html_code, height=225)
 
 def animacion_recursos_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
-        .grid-2x2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-        .box { background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.03); }
-        .label { font-size: 11px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 6px; letter-spacing: 0.5px;}
-        .area-mock { height: 50px; font-size: 12.5px; color: #334155; line-height: 1.3; }
-        .cursor { display: inline-block; width: 2px; height: 13px; background-color: #002060; animation: blink 0.8s infinite; vertical-align: middle; }
-        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
-    </style>
-    </head>
-    <body>
-        <div class="grid-2x2">
-            <div class="box">
-                <div class="label">TALENTO</div>
-                <div class="area-mock"><span id="txt_tal"></span><span id="c_tal" class="cursor"></span></div>
-            </div>
-            <div class="box">
-                <div class="label">PRESUPUESTO $</div>
-                <div class="area-mock"><span id="txt_pre"></span><span id="c_pre" class="cursor" style="display:none;"></span></div>
-            </div>
-            <div class="box">
-                <div class="label">INFRAESTRUCTURA</div>
-                <div class="area-mock"><span id="txt_inf"></span><span id="c_inf" class="cursor" style="display:none;"></span></div>
-            </div>
-            <div class="box">
-                <div class="label">TECNOLOGÍA</div>
-                <div class="area-mock"><span id="txt_tec"></span><span id="c_tec" class="cursor" style="display:none;"></span></div>
-            </div>
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family:sans-serif;">
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TALENTO</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_tal"></div>
         </div>
-
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function type(id, curId, text, speed=30) {
-                const el = document.getElementById(id);
-                const cur = document.getElementById(curId);
-                if(cur) cur.style.display = "inline-block";
-                el.innerText = "";
-                for(let i=0; i<text.length; i++) {
-                    el.innerText += text[i];
-                    await wait(speed);
-                }
-                if(cur) cur.style.display = "none";
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PRESUPUESTO $</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_pre"></div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">INFRAESTRUCTURA</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_inf"></div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TECNOLOGÍA</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_tec"></div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('txt_tal').innerText = ""; document.getElementById('txt_pre').innerText = "";
+                document.getElementById('txt_inf').innerText = ""; document.getElementById('txt_tec').innerText = "";
+                await wait(600);
+                document.getElementById('txt_tal').innerText = "1 Tech Lead, 2 Desarrolladores, 1 Analista QA"; await wait(250);
+                document.getElementById('txt_pre').innerText = "$180,000 MXN para licencias y consultoría"; await wait(250);
+                document.getElementById('txt_inf').innerText = "Servidores AWS Staging y Producción, VPN"; await wait(250);
+                document.getElementById('txt_tec').innerText = "Docker, GitHub Enterprise, Supabase Cloud"; await wait(3500);
             }
-            async function loop() {
-                while(true) {
-                    document.getElementById('txt_tal').innerText = "";
-                    document.getElementById('txt_pre').innerText = "";
-                    document.getElementById('txt_inf').innerText = "";
-                    document.getElementById('txt_tec').innerText = "";
-                    await wait(600);
-
-                    await type('txt_tal', 'c_tal', '1 Tech Lead, 2 Desarrolladores FullStack, 1 Analista QA', 25);
-                    await wait(200);
-                    await type('txt_pre', 'c_pre', '$180,000 MXN para licencias y consultoría externa', 25);
-                    await wait(200);
-                    await type('txt_inf', 'c_inf', 'Ambientes AWS (Staging / Producción), VPN corporativa', 25);
-                    await wait(200);
-                    await type('txt_tec', 'c_tec', 'Docker, GitHub Enterprise, Supabase Cloud, Sentry', 25);
-                    await wait(3500);
-                }
-            }
-            loop();
-        </script>
-    </body>
-    </html>
+        } loop();
+    </script>
     """
-    components.html(html_code, height=180)
+    components.html(html_code, height=170)
 
 def animacion_intervalos_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
-        .flex-box { display: flex; gap: 15px; align-items: center; }
-        .inputs-col { flex: 1.1; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 12px; }
-        .view-col { flex: 1.4; display: flex; flex-direction: column; gap: 6px; }
-        .lbl { font-size: 10.5px; font-weight: 900; color: #002060; text-transform: uppercase; margin-bottom: 2px;}
-        .inp { border: 1px solid #cbd5e1; border-radius: 4px; padding: 5px 8px; font-size: 12.5px; font-weight: bold; background:#f8fafc; margin-bottom: 8px;}
-        .ibox { border-radius: 6px; padding: 7px 12px; font-weight: 800; font-size: 11.5px; display: flex; justify-content: space-between; }
-    </style>
-    </head>
-    <body>
-        <div class="flex-box">
-            <div class="inputs-col">
-                <div class="lbl">Límite Rojo (%)</div>
-                <div class="inp" id="r_val">79</div>
-                <div class="lbl">Límite Amarillo (%)</div>
-                <div class="inp" id="a_val">89</div>
-                <div class="lbl">Límite Verde (%)</div>
-                <div class="inp" id="v_val">100</div>
-            </div>
-            <div class="view-col">
-                <div class="ibox" style="background:#ff0000; color:white;"><span>🔴 BAJO</span><span id="txt_r">Menor o igual a 79%</span></div>
-                <div class="ibox" style="background:#ffff00; color:black;"><span>🟡 MEDIO</span><span id="txt_a">De 80% a 89%</span></div>
-                <div class="ibox" style="background:#92d050; color:white;"><span>🟢 META</span><span id="txt_v">De 90% a 100%</span></div>
-                <div class="ibox" style="background:#00b050; color:white;"><span>🟢 SÚPER VERDE</span><span id="txt_sv">Mayor a 100%</span></div>
-            </div>
+    <div style="display:flex; gap:15px; align-items:center; font-family:sans-serif;">
+        <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Rojo (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;" id="r_val">79</div>
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Amarillo (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;">89</div>
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Verde (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold;">100</div>
         </div>
-
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function loop() {
-                while(true) {
-                    document.getElementById('r_val').innerText = "79";
-                    document.getElementById('txt_r').innerText = "Menor o igual a 79%";
-                    document.getElementById('txt_a').innerText = "De 80% a 89%";
-                    await wait(1800);
-
-                    // Cambia punto de corte en vivo
-                    document.getElementById('r_val').innerText = "69";
-                    document.getElementById('txt_r').innerText = "Menor o igual a 69%";
-                    document.getElementById('txt_a').innerText = "De 70% a 89%";
-                    await wait(3500);
-                }
+        <div style="flex:1.5; display:flex; flex-direction:column; gap:5px;">
+            <div style="background:#ff0000; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🔴 BAJO</span><span id="txt_r">Menor o igual a 79%</span></div>
+            <div style="background:#ffff00; color:black; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟡 MEDIO</span><span id="txt_a">De 80% a 89%</span></div>
+            <div style="background:#92d050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 META</span><span>De 90% a 100%</span></div>
+            <div style="background:#00b050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 SOBRESALIENTE</span><span>Mayor a 100%</span></div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('r_val').innerText = "79"; document.getElementById('txt_r').innerText = "Menor o igual a 79%";
+                document.getElementById('txt_a').innerText = "De 80% a 89%"; await wait(1800);
+                document.getElementById('r_val').innerText = "69"; document.getElementById('txt_r').innerText = "Menor o igual a 69%";
+                document.getElementById('txt_a').innerText = "De 70% a 89%"; await wait(3500);
             }
-            loop();
-        </script>
-    </body>
-    </html>
+        } loop();
+    </script>
     """
     components.html(html_code, height=170)
 
 def animacion_consolidacion_anual_realista():
     html_code = """
-    <!DOCTYPE html>
-    <html>
-    <head>
-    <style>
-        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; margin: 0; padding: 10px; background: transparent; }
-        .row-cards { display: grid; grid-template-columns: 1fr 1fr 1.2fr; gap: 12px; margin-bottom: 12px; }
-        .card-mini { background: #ffffff; border-radius: 8px; padding: 12px; text-align: center; border-top: 4px solid #002060; box-shadow: 0 3px 6px rgba(0,0,0,0.05); }
-        .title { font-size: 11px; font-weight: 900; color: #475569; text-transform: uppercase; margin-bottom: 3px; }
-        .val { font-size: 24px; font-weight: 900; }
-        table { width: 100%; border-collapse: collapse; font-size: 12px; background: white; border-radius: 6px; overflow: hidden; border: 1px solid #e2e8f0; }
-        th { background: #002060; color: white; padding: 7px; font-size: 11px; text-align: center; }
-        td { border: 1px solid #e2e8f0; padding: 7px; text-align: center; }
-    </style>
-    </head>
-    <body>
-        <div class="row-cards">
-            <div class="card-mini" id="c_kpi" style="background:#92d050; color:white;">
-                <div class="title" style="color:white;">KPIs (50%)</div>
-                <div class="val" id="v_kpi">95 %</div>
-            </div>
-            <div class="card-mini" id="c_ini" style="background:#92d050; color:white;">
-                <div class="title" style="color:white;">Iniciativas (50%)</div>
-                <div class="val" id="v_ini">92 %</div>
-            </div>
-            <div class="card-mini" id="c_tot" style="background:#00b050; color:white;">
-                <div class="title" style="color:white;">Total ONE TRACK</div>
-                <div class="val" id="v_tot">94 %</div>
-            </div>
+    <div style="font-family:sans-serif;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">KPIs (50%)</div><div style="font-size:20px; font-weight:bold;">95 %</div></div>
+            <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Iniciativas (50%)</div><div style="font-size:20px; font-weight:bold;">92 %</div></div>
+            <div style="background:#00b050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Total ONE TRACK</div><div style="font-size:20px; font-weight:bold;">94 %</div></div>
         </div>
-
-        <table>
-            <thead><tr><th>Mes</th><th>KPIs (%)</th><th>Iniciativas (%)</th><th>Integrado (%)</th><th>Q</th><th>Resultado Q</th></tr></thead>
+        <table style="width:100%; border-collapse:collapse; font-size:11.5px; background:white; border:1px solid #e2e8f0; text-align:center;">
+            <thead><tr style="background:#002060; color:white;"><th style="padding:6px;">Mes</th><th>KPIs</th><th>Iniciativas</th><th>Integrado</th><th>Q</th><th>Resultado Q</th></tr></thead>
             <tbody>
-                <tr><td><strong>Ene</strong></td><td>92% 🟢</td><td>88% 🟡</td><td>90% 🟢</td><td>Q1</td><td>-</td></tr>
-                <tr><td><strong>Feb</strong></td><td>96% 🟢</td><td>94% 🟢</td><td>95% 🟢</td><td>Q1</td><td>-</td></tr>
-                <tr><td><strong>Mar</strong></td><td>98% 🟢</td><td>95% 🟢</td><td>97% 🟢</td><td>Q1</td><td style="font-weight:bold; background:#f0fdf4;">94% 🟢</td></tr>
+                <tr><td style="padding:6px; font-weight:bold;">Ene</td><td>92% 🟢</td><td>88% 🟡</td><td>90% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td style="padding:6px; font-weight:bold;">Feb</td><td>96% 🟢</td><td>94% 🟢</td><td>95% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td style="padding:6px; font-weight:bold;">Mar</td><td>98% 🟢</td><td>95% 🟢</td><td>97% 🟢</td><td>Q1</td><td style="font-weight:bold; background:#f0fdf4;">94% 🟢</td></tr>
             </tbody>
         </table>
-
-        <script>
-            const wait = ms => new Promise(r => setTimeout(r, ms));
-            async function loop() {
-                while(true) {
-                    await wait(2500);
-                    // Pulso visual que simula recálculo reactivo
-                    document.getElementById('v_tot').innerText = "94 %";
-                    await wait(2500);
-                }
-            }
-            loop();
-        </script>
-    </body>
-    </html>
+    </div>
     """
-    components.html(html_code, height=220)
+    components.html(html_code, height=210)
 
-# --- CARGA INICIAL DESDE BD ---
-def init_okr_structure(q_name, i):
-    if f"ui_nom_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_nom_{q_name}_{i}", "")
-    if f"ui_obj_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_obj_{q_name}_{i}", "")
-    if f"ui_peso_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_peso_{q_name}_{i}", 20.0)
-    if f"ui_rec_talento_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_talento_{q_name}_{i}", "")
-    if f"ui_rec_presupuesto_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_presupuesto_{q_name}_{i}", "")
-    if f"ui_rec_infra_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_infra_{q_name}_{i}", "")
-    if f"ui_rec_tec_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_tec_{q_name}_{i}", "")
-    
-    if f"df_outputs_{q_name}_{i}" not in st.session_state.perm_store:
-        df_o = pd.DataFrame(columns=["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"])
-        df_o.index = df_o.index + 1
-        set_store(f"df_outputs_{q_name}_{i}", df_o)
-        
-    if f"df_tareas_{q_name}_{i}" not in st.session_state.perm_store:
-        df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"])
-        df_t.index = df_t.index + 1
-        set_store(f"df_tareas_{q_name}_{i}", df_t)
+# --- GENERADOR DUMMY ---
+def generar_dummy_onetest():
+    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
+    cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
+    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
 
-def cargar_datos():
-    if get_store("datos_cargados", False): return
-    try:
-        df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{token}'", ttl=0)
-        df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{token}'", ttl=0)
-        df_outputs_db = conn.query(f"SELECT * FROM iniciativas_outputs WHERE onetrack_id = '{token}'", ttl=0)
-        df_tareas = conn.query(f"SELECT * FROM iniciativas_tareas WHERE onetrack_id = '{token}'", ttl=0)
-    except Exception:
-        df_kpis, df_okrs, df_outputs_db, df_tareas = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
-
-    es_nuevo = df_kpis.empty
-
-    for q_name in trimestres.keys():
-        if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
-            q_okrs = df_okrs[df_okrs['Trimestre_ID'] == q_name]
-            max_id = q_okrs["OKR_ID"].max() if not q_okrs.empty else 1
-            set_store(f"num_iniciativas_{q_name}", int(max_id) if pd.notna(max_id) else 1)
-        else:
-            set_store(f"num_iniciativas_{q_name}", 1)
-
-    set_store("ui_p_kpis", float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0)) if not es_nuevo else 50.0)
-    set_store("ui_p_okrs", float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0)
-    set_store("cfg_corte_rojo", float(df_kpis.iloc[0].get("U_Amarillo", 79.0)) if not es_nuevo else 79.0)
-    set_store("cfg_corte_amarillo", float(df_kpis.iloc[0].get("U_Verde", 89.0)) if not es_nuevo else 89.0)
-    set_store("cfg_corte_verde", float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0)
-    
-    set_store("ui_empresa", str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", ""))
-    set_store("ui_dueno", str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", ""))
-    set_store("ui_puesto", str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else st.session_state.user_info.get("puesto", ""))
-
-    c_r = float(get_store("cfg_corte_rojo", 79.0))
-    c_a = float(get_store("cfg_corte_amarillo", 89.0))
-    c_v = float(get_store("cfg_corte_verde", 100.0))
+    set_store("ui_p_kpis", 50.0)
+    set_store("ui_p_okrs", 50.0)
+    set_store("cfg_corte_rojo", 79.0)
+    set_store("cfg_corte_amarillo", 89.0)
+    set_store("cfg_corte_verde", 100.0)
 
     for q_name, meses in trimestres.items():
         cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
         for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
         df_k = pd.DataFrame(columns=cols_kpi)
-
-        if not es_nuevo:
-            unique_kpis = df_kpis.drop_duplicates(subset=["KPI_Nombre"])
-            for _, row in unique_kpis.iterrows():
-                new_row = [str(row.get("KPI_Nombre", "")), str(row.get("Tipo", "Promedio")), float(row.get("Meta", 0.0) or 0.0), str(row.get("UM", "U")), str(row.get("< Mejor", "NO")), float(row.get("Peso_%", 20.0) or 0.0)]
-                for m in meses:
-                    new_row.extend([float(row.get(f"{m}_P", 0.0) or 0.0), float(row.get(f"{m}_R", 0.0) or 0.0), "⚪"])
-                df_k.loc[len(df_k) + 1] = new_row
-            df_k = calcular_sem_kpis(df_k, meses, c_r, c_a, c_v)
-        else:
-            row_empty = ["", "Promedio", 0.0, "U", "NO", 0.0]
-            for _ in meses: row_empty.extend([0.0, 0.0, "⚪"])
-            df_k.loc[1] = row_empty
         
+        row1 = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0]
+        for _ in meses: row1.extend([166666.0, 166666.0 * mult_q[q_name], "⚪"])
+        df_k.loc[1] = row1
+
+        row2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
+        for _ in meses: row2.extend([95.0, 95.0 * mult_q[q_name], "⚪"])
+        df_k.loc[2] = row2
+
+        df_k = calcular_sem_kpis(df_k, meses, 79.0, 89.0, 100.0)
         set_store(f"df_kpi_{q_name}", df_k)
 
-        num_i = int(get_store(f"num_iniciativas_{q_name}", 1))
-        for i in range(1, num_i + 1):
-            init_okr_structure(q_name, i)
+    # Q1
+    q_n = "Q1"; set_store(f"num_iniciativas_{q_n}", 1)
+    set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
+    set_store(f"ui_peso_{q_n}_1", 100.0)
+    set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
+    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
+    set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
+    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
+    df_o1 = pd.DataFrame(columns=cols_out)
+    df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
+    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
+    df_t1 = pd.DataFrame(columns=cols_t)
+    df_t1.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
+    df_t1.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True, ""]
+    df_t1.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False, ""]
+    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t1))
 
-            if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
-                match_okr = df_okrs[(df_okrs['Trimestre_ID'] == q_name) & (pd.to_numeric(df_okrs['OKR_ID']) == i)]
-                if not match_okr.empty:
-                    row_o = match_okr.iloc[0]
-                    set_store(f"ui_nom_{q_name}_{i}", str(row_o.get("OKR_Nombre", "")))
-                    set_store(f"ui_obj_{q_name}_{i}", str(row_o.get("Objetivo", "")))
-                    set_store(f"ui_peso_{q_name}_{i}", float(row_o.get("Peso_%", 20.0) or 20.0))
-                    set_store(f"ui_rec_talento_{q_name}_{i}", str(row_o.get("Recurso_Talento", "") if 'Recurso_Talento' in row_o else ""))
-                    set_store(f"ui_rec_presupuesto_{q_name}_{i}", str(row_o.get("Recurso_Presupuesto", "") if 'Recurso_Presupuesto' in row_o else ""))
-                    set_store(f"ui_rec_infra_{q_name}_{i}", str(row_o.get("Recurso_Infraestructura", "") if 'Recurso_Infraestructura' in row_o else ""))
-                    set_store(f"ui_rec_tec_{q_name}_{i}", str(row_o.get("Recurso_Tecnologia", "") if 'Recurso_Tecnologia' in row_o else ""))
+    # Q2
+    q_n = "Q2"; set_store(f"num_iniciativas_{q_n}", 2)
+    set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
+    set_store(f"ui_peso_{q_n}_1", 60.0)
+    set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
+    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
+    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
+    df_o2_1 = pd.DataFrame(columns=cols_out)
+    df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
+    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
+    df_t2_1 = pd.DataFrame(columns=cols_t)
+    df_t2_1.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
+    df_t2_1.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True, ""]
+    df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
+    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
 
-            if not df_outputs_db.empty and 'Iniciativa_ID' in df_outputs_db.columns:
-                out_okr = df_outputs_db[(pd.to_numeric(df_outputs_db['Iniciativa_ID']) == i) & (df_outputs_db['Trimestre'] == q_name)]
-                if not out_okr.empty:
-                    df_o = out_okr[["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]].rename(columns={"Avance": "Avance %"}).reset_index(drop=True)
-                    df_o.index = df_o.index + 1
-                    set_store(f"df_outputs_{q_name}_{i}", update_avance_resultados(df_o))
+    set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
+    set_store(f"ui_peso_{q_n}_2", 40.0)
+    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
+    set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
+    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_2", "-")
+    set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
+    df_o2_2 = pd.DataFrame(columns=cols_out)
+    df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
+    set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
+    df_t2_2 = pd.DataFrame(columns=cols_t)
+    df_t2_2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
+    df_t2_2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False, ""]
+    df_t2_2.loc[3] = ["3.", "Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False, ""]
+    set_store(f"df_tareas_{q_n}_2", update_estatus_tareas(df_t2_2))
 
-            if not df_tareas.empty and 'Iniciativa_ID' in df_tareas.columns and 'Trimestre' in df_tareas.columns:
-                tar_okr = df_tareas[(pd.to_numeric(df_tareas['Iniciativa_ID']) == i) & (df_tareas['Trimestre'] == q_name)]
-                if not tar_okr.empty:
-                    df_t = tar_okr[["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]].reset_index(drop=True)
-                    df_t["Completado"] = df_t["Completado"].astype(bool)
-                    df_t["Inicio"] = pd.to_datetime(df_t["Inicio"]).dt.date
-                    df_t["Fin"] = pd.to_datetime(df_t["Fin"]).dt.date
-                    df_t.index = df_t.index + 1
-                    set_store(f"df_tareas_{q_name}_{i}", update_estatus_tareas(df_t))
+    # Q3
+    q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
+    set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
+    set_store(f"ui_peso_{q_n}_1", 100.0)
+    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
+    set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
+    set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
+    df_o3 = pd.DataFrame(columns=cols_out)
+    df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
+    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
+    df_t3 = pd.DataFrame(columns=cols_t)
+    df_t3.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
+    df_t3.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False, ""]
+    df_t3.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False, ""]
+    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t3))
 
-    set_store("datos_cargados", True)
+    # Q4
+    q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
+    set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
+    set_store(f"ui_peso_{q_n}_1", 100.0)
+    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
+    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
+    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
+    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
+    set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
+    df_o4 = pd.DataFrame(columns=cols_out)
+    df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
+    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
+    df_t4 = pd.DataFrame(columns=cols_t)
+    df_t4.loc[1] = ["1.", "Revisión", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
+    df_t4.loc[2] = ["2.", "Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
+    df_t4.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
+    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t4))
 
-# --- GUARDADO EN SUPABASE ---
-def guardar_en_bd():
-    commit_live_edits()
-    kpis_data, okrs_data, tareas_data, outputs_data = [], [], [], []
-    
-    peso_k = float(get_store("ui_p_kpis", 50.0))
-    peso_o = float(get_store("ui_p_okrs", 50.0))
-    c_rojo = float(get_store("cfg_corte_rojo", 79.0))
-    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0))
-    c_verde = float(get_store("cfg_corte_verde", 100.0))
-    emp = str(get_store("ui_empresa", ""))
-    due = str(get_store("ui_dueno", ""))
-    pue = str(get_store("ui_puesto", ""))
-    logo_c = st.session_state.user_info.get("logo_url", DEFAULT_LOGO_CLIENTE)
-    if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
+def ejecutar_dummy_callback():
+    for key in list(st.session_state.keys()):
+        if key.startswith("editor_") or key.startswith("ui_") or key.startswith("live_") or key.startswith("cfg_"):
+            del st.session_state[key]
+    generar_dummy_onetest()
+    guardar_en_bd()
+    set_store("datos_cargados", False)
 
-    df_kpi_master = get_store("df_kpi_Q1", pd.DataFrame())
-    if not df_kpi_master.empty:
-        for _, r in df_kpi_master.iterrows():
-            k_nom = str(r.get("Indicadores Clave de Desempeño (KPIs)", "")).strip()
-            if k_nom:
-                row = {
-                    "onetrack_id": token, "Empresa": emp, "Puesto": pue, "Dueno": due, "Logo_Cliente": logo_c,
-                    "KPI_Nombre": k_nom, "Tipo": r.get("Tipo", "Promedio"), "Meta": float(r.get("Meta", 0.0) or 0.0),
-                    "UM": str(r.get("UM", "U")), "< Mejor": str(r.get("< Mejor", "NO")), "Peso_%": float(r.get("Peso %", 0.0) or 0.0),
-                    "Peso_Global_KPI": peso_k, "Peso_Global_OKR": peso_o, "U_SVerde": c_verde, "U_Verde": c_amarillo, "U_Amarillo": c_rojo
-                }
-                for q_n, meses in trimestres.items():
-                    df_q = get_store(f"df_kpi_{q_n}", pd.DataFrame())
-                    match = df_q[df_q["Indicadores Clave de Desempeño (KPIs)"] == k_nom]
-                    if not match.empty:
-                        for m in meses:
-                            row[f"{m}_P"] = float(match.iloc[0].get(f"{m} Prog", 0.0) or 0.0)
-                            row[f"{m}_R"] = float(match.iloc[0].get(f"{m} Real", 0.0) or 0.0)
-                    else:
-                        for m in meses: row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
-                kpis_data.append(row)
-
-    for q_n in trimestres.keys():
-        num_i = int(get_store(f"num_iniciativas_{q_n}", 1))
-        for i in range(1, num_i + 1):
-            o_nom = str(get_store(f"ui_nom_{q_n}_{i}", "")).strip()
-            if o_nom:
-                df_t_prog = update_estatus_tareas(get_store(f"df_tareas_{q_n}_{i}", pd.DataFrame()))
-                tot_t = len(df_t_prog[df_t_prog["Tarea"].str.strip() != ""]) if not df_t_prog.empty else 0
-                comp = df_t_prog["Completado"].sum() if tot_t > 0 else 0
-                if tot_t == 0: e_calc = "⚪ Sin Tareas"
-                elif "🔴 Retrasado" in df_t_prog["Estatus"].values: e_calc = "🔴 Retrasado"
-                elif comp == tot_t and tot_t > 0: e_calc = "🟢 Completado"
-                else: e_calc = "🟢 En Tiempo"
-
-                okrs_data.append({
-                    "onetrack_id": token, "Trimestre_ID": q_n, "OKR_ID": i, "OKR_Nombre": o_nom,
-                    "Objetivo": str(get_store(f"ui_obj_{q_n}_{i}", "")), "Peso_%": float(get_store(f"ui_peso_{q_n}_{i}", 20.0) or 20.0),
-                    "Estatus_Salud": e_calc,
-                    "Recurso_Talento": str(get_store(f"ui_rec_talento_{q_n}_{i}", "")),
-                    "Recurso_Presupuesto": str(get_store(f"ui_rec_presupuesto_{q_n}_{i}", "")),
-                    "Recurso_Infraestructura": str(get_store(f"ui_rec_infra_{q_n}_{i}", "")),
-                    "Recurso_Tecnologia": str(get_store(f"ui_rec_tec_{q_n}_{i}", ""))
-                })
-
-                df_o = update_avance_resultados(get_store(f"df_outputs_{q_n}_{i}", pd.DataFrame()))
-                if not df_o.empty:
-                    for _, o_row in df_o.iterrows():
-                        if str(o_row.get("Nombre", "")).strip() != "":
-                            outputs_data.append({
-                                "onetrack_id": token, "Iniciativa_ID": i, "Trimestre": q_n,
-                                "Nombre": str(o_row.get("Nombre", "")), "UM": str(o_row.get("UM", "U")),
-                                "< Mejor": str(o_row.get("< Mejor", "NO")), "Meta": float(o_row.get("Meta", 0.0) or 0.0),
-                                "Real": float(o_row.get("Real", 0.0) or 0.0), "Avance": float(o_row.get("Avance %", 0.0) or 0.0)
-                            })
-
-                if not df_t_prog.empty:
-                    for _, t_row in df_t_prog.iterrows():
-                        if str(t_row.get("Tarea", "")).strip() != "":
-                            tareas_data.append({
-                                "onetrack_id": token, "Iniciativa_ID": i, "Trimestre": q_n,
-                                "Jerarquia": str(t_row.get("Jerarquia", "")), "Tarea": str(t_row.get("Tarea", "")),
-                                "Responsable": str(t_row.get("Responsable", "")), "Inicio": t_row.get("Inicio"),
-                                "Fin": t_row.get("Fin"), "Completado": bool(t_row.get("Completado", False))
-                            })
-
-    try:
-        with conn.engine.begin() as transaction:
-            transaction.execute(text("DELETE FROM kpis WHERE onetrack_id = :token"), {"token": token})
-            transaction.execute(text("DELETE FROM okrs_general WHERE onetrack_id = :token"), {"token": token})
-            transaction.execute(text("DELETE FROM iniciativas_outputs WHERE onetrack_id = :token"), {"token": token})
-            transaction.execute(text("DELETE FROM iniciativas_tareas WHERE onetrack_id = :token"), {"token": token})
-    except Exception: pass
-
-    cols_k_all = ["onetrack_id", "Empresa", "Puesto", "Dueno", "Logo_Cliente", "KPI_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%", "Peso_Global_KPI", "Peso_Global_OKR", "U_SVerde", "U_Verde", "U_Amarillo"]
-    for q_n, meses in trimestres.items():
-        for m in meses: cols_k_all.extend([f"{m}_P", f"{m}_R"])
-
-    pd.DataFrame(kpis_data, columns=cols_k_all).to_sql("kpis", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(okrs_data, columns=["onetrack_id", "Trimestre_ID", "OKR_ID", "OKR_Nombre", "Objetivo", "Peso_%", "Estatus_Salud", "Recurso_Talento", "Recurso_Presupuesto", "Recurso_Infraestructura", "Recurso_Tecnologia"]).to_sql("okrs_general", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(outputs_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]).to_sql("iniciativas_outputs", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(tareas_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]).to_sql("iniciativas_tareas", con=conn.engine, if_exists='append', index=False)
-
-# --- INICIO DE SESIÓN ---
+# --- ACCESO / LOGIN ---
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
     col1, col2, col3 = st.columns([1, 1, 1])
