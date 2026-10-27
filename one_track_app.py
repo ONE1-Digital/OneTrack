@@ -811,7 +811,7 @@ ANIMACIONES_HTML = {
         """
     },
     "intervalos": {
-        "height": 170,
+        "height": 220,
         "html": """
         <div style="display:flex; gap:15px; align-items:center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
