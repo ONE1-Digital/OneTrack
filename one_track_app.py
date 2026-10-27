@@ -244,7 +244,7 @@ def get_mes_cump(m, q_name):
     return res_k, res_o, res_tot
 
 # ==============================================================================
-# FASE 3: RUTINAS DE BASE DE DATOS Y GESTIÓN DE DATOS
+# FASE 3: RUTINAS DE BASE DE DATOS Y GESTIÓN DE ESTADO
 # ==============================================================================
 def commit_live_edits():
     c_r = float(get_store("cfg_corte_rojo", 79.0) or 79.0)
