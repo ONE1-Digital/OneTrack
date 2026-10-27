@@ -43,7 +43,7 @@ meses_totales = ["Ene", "Feb", "Mar", "Abr", "May", "Jun", "Jul", "Ago", "Sep", 
 DEFAULT_LOGO_CLIENTE = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/MARBER.png"
 DEFAULT_LOGO_ONE_TRACK = "https://kidjtwcttgcedcljikvy.supabase.co/storage/v1/object/public/Logos/ONE_TRACK_LOGO.png"
 
-# --- CONEXION A BD Y AUTENTICACION INICIAL ---
+# --- CONEXION A BD Y CREACION DE TABLA BASE DE USUARIOS ---
 conn = st.connection("supabase", type="sql")
 
 def init_db():
@@ -68,37 +68,32 @@ def get_store(key, default=None):
 def set_store(key, val):
     st.session_state.perm_store[key] = val
 
-def commit_live_edits():
-    for q in trimestres.keys():
-        if f"live_kpi_{q}" in st.session_state:
-            set_store(f"df_kpi_{q}", st.session_state[f"live_kpi_{q}"])
-        num_i = int(get_store(f"num_iniciativas_{q}", 1) or 1)
-        for i in range(1, num_i + 1):
-            if f"live_out_{q}_{i}" in st.session_state:
-                set_store(f"df_outputs_{q}_{i}", st.session_state[f"live_out_{q}_{i}"])
-            if f"live_tar_{q}_{i}" in st.session_state:
-                set_store(f"df_tareas_{q}_{i}", st.session_state[f"live_tar_{q}_{i}"])
-
 def bind_text_input(label, key, default=""):
     if key not in st.session_state:
-        st.session_state[key] = get_store(key, default)
+        val = get_store(key, default)
+        st.session_state[key] = str(val) if val is not None else default
     st.text_input(label, key=key, label_visibility="collapsed")
     set_store(key, st.session_state[key])
 
 def bind_text_area(label, key, default="", height=70):
     if key not in st.session_state:
-        st.session_state[key] = get_store(key, default)
+        val = get_store(key, default)
+        st.session_state[key] = str(val) if val is not None else default
     st.text_area(label, key=key, height=height, label_visibility="collapsed")
     set_store(key, st.session_state[key])
 
 def bind_number_input(label, key, default=0.0):
     if key not in st.session_state:
-        st.session_state[key] = float(get_store(key, default))
+        val = get_store(key, default)
+        try:
+            st.session_state[key] = float(val) if val is not None else float(default)
+        except (ValueError, TypeError):
+            st.session_state[key] = float(default)
     st.number_input(label, key=key, label_visibility="collapsed")
     set_store(key, st.session_state[key])
 
 # ==============================================================================
-# 2. FUNCIONES MATEMATICAS, FORMATOS Y SEMAFORIZACIÓN
+# 2. FUNCIONES MATEMATICAS Y COLORIMETRIA
 # ==============================================================================
 def calc_cump(prog, real, menor_mejor="NO"):
     if prog == 0 and real == 0: return 0.0
@@ -175,9 +170,9 @@ def calcular_sem_kpis(df, meses, c_rojo, c_amarillo, c_verde):
 
 def render_footer(df, meses):
     html_footer = "<div style='display:flex; justify-content:flex-start; gap:12px; margin-bottom: 20px; align-items:center;'><div style='font-weight:900; color:#002060; font-size:15px; text-transform:uppercase;'>Avance Mensual:</div>"
-    c_rojo = float(get_store("cfg_corte_rojo", 79.0))
-    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0))
-    c_verde = float(get_store("cfg_corte_verde", 100.0))
+    c_rojo = float(get_store("cfg_corte_rojo", 79.0) or 79.0)
+    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0) or 89.0)
+    c_verde = float(get_store("cfg_corte_verde", 100.0) or 100.0)
     for m in meses:
         total_peso, acumulado = 0.0, 0.0
         for i in range(len(df)):
@@ -197,13 +192,13 @@ def render_footer(df, meses):
 def dibujar_gantt(df_tareas):
     if df_tareas.empty: return
     df_plot = df_tareas.copy()
-    df_plot = df_plot[df_plot["Tarea"].str.strip() != ""]
+    df_plot = df_plot[df_plot["Tarea"].astype(str).str.strip() != ""]
     df_plot["Inicio"] = pd.to_datetime(df_plot["Inicio"], errors='coerce')
     df_plot["Fin"] = pd.to_datetime(df_plot["Fin"], errors='coerce')
     df_plot = df_plot.dropna(subset=["Inicio", "Fin"])
     if df_plot.empty: return
     df_plot = df_plot.sort_values(by="Jerarquia")
-    df_plot['Nombre'] = df_plot['Jerarquia'] + " " + df_plot['Tarea']
+    df_plot['Nombre'] = df_plot['Jerarquia'].astype(str) + " " + df_plot['Tarea'].astype(str)
     df_plot['Estado_Visual'] = df_plot['Completado'].apply(lambda x: "Realizado" if x else "Pendiente")
     chart = alt.Chart(df_plot).mark_bar(cornerRadius=4, size=20).encode(
         x=alt.X('Inicio', title='', axis=alt.Axis(format="%d %b", grid=True, gridColor="#f0f2f6")), x2='Fin',
@@ -213,346 +208,255 @@ def dibujar_gantt(df_tareas):
     st.altair_chart(chart, use_container_width=True)
 
 # ==============================================================================
-# 3. RUTINAS DE BASE DE DATOS Y GESTIÓN DE DATOS
+# 3. COMPONENTES DE SIMULACION HTML5 / JS (ALTA FIDELIDAD)
 # ==============================================================================
-def init_okr_structure(q_name, i):
-    if f"ui_nom_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_nom_{q_name}_{i}", "")
-    if f"ui_obj_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_obj_{q_name}_{i}", "")
-    if f"ui_peso_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_peso_{q_name}_{i}", 20.0)
-    if f"ui_rec_talento_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_talento_{q_name}_{i}", "")
-    if f"ui_rec_presupuesto_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_presupuesto_{q_name}_{i}", "")
-    if f"ui_rec_infra_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_infra_{q_name}_{i}", "")
-    if f"ui_rec_tec_{q_name}_{i}" not in st.session_state.perm_store: set_store(f"ui_rec_tec_{q_name}_{i}", "")
-    
-    if f"df_outputs_{q_name}_{i}" not in st.session_state.perm_store:
-        df_o = pd.DataFrame(columns=["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"])
-        df_o.index = df_o.index + 1
-        set_store(f"df_outputs_{q_name}_{i}", df_o)
-        
-    if f"df_tareas_{q_name}_{i}" not in st.session_state.perm_store:
-        df_t = pd.DataFrame(columns=["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"])
-        df_t.index = df_t.index + 1
-        set_store(f"df_tareas_{q_name}_{i}", df_t)
+def animacion_kpis_realista():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+            <thead><tr>
+                <th style="background:#002060; color:white; padding:10px 8px; width:25%; text-align:left;">KPI</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:10%; text-align:center;">Tipo</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:9%; text-align:center;">Meta</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:7%; text-align:center;">UM</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:7%; text-align:center;">< Mejor</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:8%; text-align:center;">Peso %</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:11%; text-align:center;">Ene Prog</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:11%; text-align:center;">Ene Real</th>
+                <th style="background:#002060; color:white; padding:10px 8px; width:12%; text-align:center;">Ene Semáforo</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td style="padding:9px 8px; text-align:left; border:1px solid #e2e8f0; font-weight:600;"><span id="kpi_nombre"></span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">Acumulado</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_meta"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">$</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">NO</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_peso"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_p1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-weight:600;" id="kpi_r1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-size:16px;" id="kpi_sem">⚪</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('kpi_nombre').innerText = ""; document.getElementById('kpi_meta').innerText = "";
+                document.getElementById('kpi_peso').innerText = ""; document.getElementById('kpi_p1').innerText = "";
+                document.getElementById('kpi_r1').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪";
+                await wait(800);
+                let t = "Ventas Nuevos Clientes";
+                for(let i=0; i<t.length; i++) { document.getElementById('kpi_nombre').innerText += t[i]; await wait(40); }
+                await wait(300); document.getElementById('kpi_meta').innerText = "500,000";
+                await wait(300); document.getElementById('kpi_peso').innerText = "50 %";
+                await wait(400); document.getElementById('kpi_p1').innerText = "40,000";
+                await wait(400); document.getElementById('kpi_r1').innerText = "42,500";
+                await wait(300); document.getElementById('kpi_sem').innerText = "🟢";
+                await wait(3500);
+            }
+        } loop();
+    </script>
+    """
+    components.html(html_code, height=135)
 
-def cargar_datos():
-    if get_store("datos_cargados", False): return
-    user_token = st.session_state.user_info['username']
-    try:
-        df_kpis = conn.query(f"SELECT * FROM kpis WHERE onetrack_id = '{user_token}'", ttl=0)
-        df_okrs = conn.query(f"SELECT * FROM okrs_general WHERE onetrack_id = '{user_token}'", ttl=0)
-        df_outputs_db = conn.query(f"SELECT * FROM iniciativas_outputs WHERE onetrack_id = '{user_token}'", ttl=0)
-        df_tareas = conn.query(f"SELECT * FROM iniciativas_tareas WHERE onetrack_id = '{user_token}'", ttl=0)
-    except Exception:
-        df_kpis, df_okrs, df_outputs_db, df_tareas = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
+def animacion_iniciativa_completa_realista():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <div style="background:#002060; color:white; padding:8px 16px; border-radius:8px; font-weight:900;">Iniciativa #1</div>
+            <div id="pill_cump" style="padding:8px 15px; border-radius:6px; font-weight:900; font-size:13px; color:white; background:#64748b;">CUMPLIMIENTO: 0.0%</div>
+        </div>
+        <div style="display:grid; grid-template-columns:3fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">NOMBRE</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; display:flex; align-items:center;" id="ini_nom"></div></div>
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PONDERACIÓN (%)</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold;" id="ini_peso"></div></div>
+            <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">ESTATUS</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#64748b;" id="ini_est">⚪ Sin Tareas</div></div>
+        </div>
+        <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">OBJETIVO</div>
+        <div style="height:55px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:12.5px; line-height:1.3; margin-bottom:12px;" id="ini_obj"></div>
+        <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e2e8f0;">
+            <thead><tr style="background:#002060; color:white;"><th style="padding:6px; text-align:left;">Resultado</th><th>UM</th><th>Meta</th><th>Real</th><th>Avance %</th></tr></thead>
+            <tbody><tr><td style="padding:6px;" id="r1_nom">-</td><td style="padding:6px; text-align:center;" id="r1_um">-</td><td style="padding:6px; text-align:center;" id="r1_meta">-</td><td style="padding:6px; text-align:center;" id="r1_real">-</td><td style="padding:6px; text-align:center; font-weight:bold;" id="r1_av">-</td></tr></tbody>
+        </table>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('ini_nom').innerText = ""; document.getElementById('ini_peso').innerText = "";
+                document.getElementById('ini_obj').innerText = ""; document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
+                document.getElementById('ini_est').style.color = "#64748b"; document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 0.0%";
+                document.getElementById('pill_cump').style.background = "#64748b"; document.getElementById('r1_nom').innerText = "-";
+                document.getElementById('r1_um').innerText = "-"; document.getElementById('r1_meta').innerText = "-";
+                document.getElementById('r1_real').innerText = "-"; document.getElementById('r1_av').innerText = "-";
+                document.getElementById('r1_av').style.color = "black";
+                await wait(800);
+                let t = "Lanzamiento de Plataforma B2B";
+                for(let i=0; i<t.length; i++) { document.getElementById('ini_nom').innerText += t[i]; await wait(30); }
+                await wait(200); document.getElementById('ini_peso').innerText = "60.0";
+                await wait(200); document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
+                await wait(400); document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
+                document.getElementById('r1_um').innerText = "U"; document.getElementById('r1_meta').innerText = "50";
+                await wait(400); document.getElementById('r1_real').innerText = "50";
+                await wait(200); document.getElementById('r1_av').innerText = "100.0 %";
+                document.getElementById('r1_av').style.color = "#00b050";
+                document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 100.0%";
+                document.getElementById('pill_cump').style.background = "#00b050";
+                document.getElementById('ini_est').innerText = "🟢 En Tiempo";
+                document.getElementById('ini_est').style.color = "#00b050";
+                await wait(3500);
+            }
+        } loop();
+    </script>
+    """
+    components.html(html_code, height=330)
 
-    es_nuevo = df_kpis.empty
+def animacion_gantt_tareas_realista():
+    html_code = """
+    <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px;">
+        <table style="width: 100%; border-collapse: collapse;">
+            <thead><tr style="background: #002060; color: white;">
+                <th style="padding: 7px;">Jerarquía</th><th style="padding: 7px; text-align: left;">Tarea</th><th>Responsable</th><th>Fin</th><th>Comp.</th><th>Estatus</th>
+            </tr></thead>
+            <tbody>
+                <tr>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.</td>
+                    <td style="padding:7px; border:1px solid #e2e8f0;">Requerimientos funcionales</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Ana</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">12 Feb</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" checked disabled></td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; color:#00b050; font-weight:bold;">🟢 A tiempo</td>
+                </tr>
+                <tr>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.1</td>
+                    <td style="padding:7px; border:1px solid #e2e8f0;">Pruebas QA en servidor</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Luis</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">25 Feb</td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" id="chk2"></td>
+                    <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; font-weight:bold; color:#ff0000;" id="st2">🔴 Retrasado</td>
+                </tr>
+            </tbody>
+        </table>
+        <div style="margin-top:12px; padding-top:8px; border-top:2px dashed #e2e8f0;">
+            <div style="display:flex; align-items:center; margin-bottom:5px;">
+                <div style="width:130px; font-weight:bold;">1. Requerimientos</div>
+                <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div style="width:40%; height:100%; background:#002060; border-radius:4px;"></div></div>
+            </div>
+            <div style="display:flex; align-items:center;">
+                <div style="width:130px; font-weight:bold;">1.1 Pruebas QA</div>
+                <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div id="bar2" style="left:40%; width:45%; height:100%; background:#a0aabf; border-radius:4px; position:absolute;"></div></div>
+            </div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('chk2').checked = false; document.getElementById('st2').innerText = "🔴 Retrasado";
+                document.getElementById('st2').style.color = "#ff0000"; document.getElementById('bar2').style.background = "#a0aabf";
+                await wait(2000);
+                document.getElementById('chk2').checked = true; await wait(300);
+                document.getElementById('st2').innerText = "🟢 A tiempo"; document.getElementById('st2').style.color = "#00b050";
+                document.getElementById('bar2').style.background = "#002060"; await wait(3500);
+            }
+        } loop();
+    </script>
+    """
+    components.html(html_code, height=225)
 
-    for q_name in trimestres.keys():
-        if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
-            q_okrs = df_okrs[df_okrs['Trimestre_ID'] == q_name]
-            max_id = q_okrs["OKR_ID"].max() if not q_okrs.empty else 1
-            set_store(f"num_iniciativas_{q_name}", int(max_id) if pd.notna(max_id) else 1)
-        else:
-            set_store(f"num_iniciativas_{q_name}", 1)
+def animacion_recursos_realista():
+    html_code = """
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TALENTO</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_tal"></div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PRESUPUESTO $</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_pre"></div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">INFRAESTRUCTURA</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_inf"></div>
+        </div>
+        <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TECNOLOGÍA</div>
+            <div style="font-size:12px; color:#334155; height:45px;" id="txt_tec"></div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('txt_tal').innerText = ""; document.getElementById('txt_pre').innerText = "";
+                document.getElementById('txt_inf').innerText = ""; document.getElementById('txt_tec').innerText = "";
+                await wait(600);
+                document.getElementById('txt_tal').innerText = "1 Tech Lead, 2 Desarrolladores, 1 Analista QA"; await wait(250);
+                document.getElementById('txt_pre').innerText = "$180,000 MXN para licencias y consultoría"; await wait(250);
+                document.getElementById('txt_inf').innerText = "Servidores AWS Staging y Producción, VPN"; await wait(250);
+                document.getElementById('txt_tec').innerText = "Docker, GitHub Enterprise, Supabase Cloud"; await wait(3500);
+            }
+        } loop();
+    </script>
+    """
+    components.html(html_code, height=170)
 
-    set_store("ui_p_kpis", float(df_kpis.iloc[0].get("Peso_Global_KPI", 50.0)) if not es_nuevo else 50.0)
-    set_store("ui_p_okrs", float(df_kpis.iloc[0].get("Peso_Global_OKR", 50.0)) if not es_nuevo else 50.0)
-    set_store("cfg_corte_rojo", float(df_kpis.iloc[0].get("U_Amarillo", 79.0)) if not es_nuevo else 79.0)
-    set_store("cfg_corte_amarillo", float(df_kpis.iloc[0].get("U_Verde", 89.0)) if not es_nuevo else 89.0)
-    set_store("cfg_corte_verde", float(df_kpis.iloc[0].get("U_SVerde", 100.0)) if not es_nuevo else 100.0)
-    
-    set_store("ui_empresa", str(df_kpis.iloc[0].get("Empresa", "")) if not es_nuevo else st.session_state.user_info.get("empresa", ""))
-    set_store("ui_dueno", str(df_kpis.iloc[0].get("Dueno", "")) if not es_nuevo else st.session_state.user_info.get("nombre", ""))
-    set_store("ui_puesto", str(df_kpis.iloc[0].get("Puesto", "")) if not es_nuevo else st.session_state.user_info.get("puesto", ""))
+def animacion_intervalos_realista():
+    html_code = """
+    <div style="display:flex; gap:15px; align-items:center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Rojo (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;" id="r_val">79</div>
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Amarillo (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;">89</div>
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Verde (%)</div>
+            <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold;">100</div>
+        </div>
+        <div style="flex:1.5; display:flex; flex-direction:column; gap:5px;">
+            <div style="background:#ff0000; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🔴 BAJO</span><span id="txt_r">Menor o igual a 79%</span></div>
+            <div style="background:#ffff00; color:black; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟡 MEDIO</span><span id="txt_a">De 80% a 89%</span></div>
+            <div style="background:#92d050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 META</span><span>De 90% a 100%</span></div>
+            <div style="background:#00b050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 SOBRESALIENTE</span><span>Mayor a 100%</span></div>
+        </div>
+    </div>
+    <script>
+        const wait = ms => new Promise(r => setTimeout(r, ms));
+        async function loop() {
+            while(true) {
+                document.getElementById('r_val').innerText = "79"; document.getElementById('txt_r').innerText = "Menor o igual a 79%";
+                document.getElementById('txt_a').innerText = "De 80% a 89%"; await wait(1800);
+                document.getElementById('r_val').innerText = "69"; document.getElementById('txt_r').innerText = "Menor o igual a 69%";
+                document.getElementById('txt_a').innerText = "De 70% a 89%"; await wait(3500);
+            }
+        } loop();
+    </script>
+    """
+    components.html(html_code, height=170)
 
-    c_r = float(get_store("cfg_corte_rojo", 79.0))
-    c_a = float(get_store("cfg_corte_amarillo", 89.0))
-    c_v = float(get_store("cfg_corte_verde", 100.0))
-
-    for q_name, meses in trimestres.items():
-        cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
-        for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
-        df_k = pd.DataFrame(columns=cols_kpi)
-
-        if not es_nuevo:
-            unique_kpis = df_kpis.drop_duplicates(subset=["KPI_Nombre"])
-            for _, row in unique_kpis.iterrows():
-                new_row = [str(row.get("KPI_Nombre", "")), str(row.get("Tipo", "Promedio")), float(row.get("Meta", 0.0) or 0.0), str(row.get("UM", "U")), str(row.get("< Mejor", "NO")), float(row.get("Peso_%", 20.0) or 0.0)]
-                for m in meses:
-                    new_row.extend([float(row.get(f"{m}_P", 0.0) or 0.0), float(row.get(f"{m}_R", 0.0) or 0.0), "⚪"])
-                df_k.loc[len(df_k) + 1] = new_row
-            df_k = calcular_sem_kpis(df_k, meses, c_r, c_a, c_v)
-        else:
-            row_empty = ["", "Promedio", 0.0, "U", "NO", 0.0]
-            for _ in meses: row_empty.extend([0.0, 0.0, "⚪"])
-            df_k.loc[1] = row_empty
-        
-        set_store(f"df_kpi_{q_name}", df_k)
-
-        num_i = int(get_store(f"num_iniciativas_{q_name}", 1))
-        for i in range(1, num_i + 1):
-            init_okr_structure(q_name, i)
-
-            if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
-                match_okr = df_okrs[(df_okrs['Trimestre_ID'] == q_name) & (pd.to_numeric(df_okrs['OKR_ID']) == i)]
-                if not match_okr.empty:
-                    row_o = match_okr.iloc[0]
-                    set_store(f"ui_nom_{q_name}_{i}", str(row_o.get("OKR_Nombre", "")))
-                    set_store(f"ui_obj_{q_name}_{i}", str(row_o.get("Objetivo", "")))
-                    set_store(f"ui_peso_{q_name}_{i}", float(row_o.get("Peso_%", 20.0) or 20.0))
-                    set_store(f"ui_rec_talento_{q_name}_{i}", str(row_o.get("Recurso_Talento", "") if 'Recurso_Talento' in row_o else ""))
-                    set_store(f"ui_rec_presupuesto_{q_name}_{i}", str(row_o.get("Recurso_Presupuesto", "") if 'Recurso_Presupuesto' in row_o else ""))
-                    set_store(f"ui_rec_infra_{q_name}_{i}", str(row_o.get("Recurso_Infraestructura", "") if 'Recurso_Infraestructura' in row_o else ""))
-                    set_store(f"ui_rec_tec_{q_name}_{i}", str(row_o.get("Recurso_Tecnologia", "") if 'Recurso_Tecnologia' in row_o else ""))
-
-            if not df_outputs_db.empty and 'Iniciativa_ID' in df_outputs_db.columns:
-                out_okr = df_outputs_db[(pd.to_numeric(df_outputs_db['Iniciativa_ID']) == i) & (df_outputs_db['Trimestre'] == q_name)]
-                if not out_okr.empty:
-                    df_o = out_okr[["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]].rename(columns={"Avance": "Avance %"}).reset_index(drop=True)
-                    df_o.index = df_o.index + 1
-                    set_store(f"df_outputs_{q_name}_{i}", update_avance_resultados(df_o))
-
-            if not df_tareas.empty and 'Iniciativa_ID' in df_tareas.columns and 'Trimestre' in df_tareas.columns:
-                tar_okr = df_tareas[(pd.to_numeric(df_tareas['Iniciativa_ID']) == i) & (df_tareas['Trimestre'] == q_name)]
-                if not tar_okr.empty:
-                    df_t = tar_okr[["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]].reset_index(drop=True)
-                    df_t["Completado"] = df_t["Completado"].astype(bool)
-                    df_t["Inicio"] = pd.to_datetime(df_t["Inicio"]).dt.date
-                    df_t["Fin"] = pd.to_datetime(df_t["Fin"]).dt.date
-                    df_t.index = df_t.index + 1
-                    set_store(f"df_tareas_{q_name}_{i}", update_estatus_tareas(df_t))
-
-    set_store("datos_cargados", True)
-
-def guardar_en_bd():
-    commit_live_edits()
-    user_token = st.session_state.user_info['username']
-    kpis_data, okrs_data, tareas_data, outputs_data = [], [], [], []
-    
-    peso_k = float(get_store("ui_p_kpis", 50.0))
-    peso_o = float(get_store("ui_p_okrs", 50.0))
-    c_rojo = float(get_store("cfg_corte_rojo", 79.0))
-    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0))
-    c_verde = float(get_store("cfg_corte_verde", 100.0))
-    emp = str(get_store("ui_empresa", ""))
-    due = str(get_store("ui_dueno", ""))
-    pue = str(get_store("ui_puesto", ""))
-    logo_c = st.session_state.user_info.get("logo_url", DEFAULT_LOGO_CLIENTE)
-    if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
-
-    df_kpi_master = get_store("df_kpi_Q1", pd.DataFrame())
-    if not df_kpi_master.empty:
-        for _, r in df_kpi_master.iterrows():
-            k_nom = str(r.get("Indicadores Clave de Desempeño (KPIs)", "")).strip()
-            if k_nom:
-                row = {
-                    "onetrack_id": user_token, "Empresa": emp, "Puesto": pue, "Dueno": due, "Logo_Cliente": logo_c,
-                    "KPI_Nombre": k_nom, "Tipo": r.get("Tipo", "Promedio"), "Meta": float(r.get("Meta", 0.0) or 0.0),
-                    "UM": str(r.get("UM", "U")), "< Mejor": str(r.get("< Mejor", "NO")), "Peso_%": float(r.get("Peso %", 0.0) or 0.0),
-                    "Peso_Global_KPI": peso_k, "Peso_Global_OKR": peso_o, "U_SVerde": c_verde, "U_Verde": c_amarillo, "U_Amarillo": c_rojo
-                }
-                for q_n, meses in trimestres.items():
-                    df_q = get_store(f"df_kpi_{q_n}", pd.DataFrame())
-                    match = df_q[df_q["Indicadores Clave de Desempeño (KPIs)"] == k_nom]
-                    if not match.empty:
-                        for m in meses:
-                            row[f"{m}_P"] = float(match.iloc[0].get(f"{m} Prog", 0.0) or 0.0)
-                            row[f"{m}_R"] = float(match.iloc[0].get(f"{m} Real", 0.0) or 0.0)
-                    else:
-                        for m in meses: row[f"{m}_P"], row[f"{m}_R"] = 0.0, 0.0
-                kpis_data.append(row)
-
-    for q_n in trimestres.keys():
-        num_i = int(get_store(f"num_iniciativas_{q_n}", 1))
-        for i in range(1, num_i + 1):
-            o_nom = str(get_store(f"ui_nom_{q_n}_{i}", "")).strip()
-            if o_nom:
-                df_t_prog = update_estatus_tareas(get_store(f"df_tareas_{q_n}_{i}", pd.DataFrame()))
-                tot_t = len(df_t_prog[df_t_prog["Tarea"].str.strip() != ""]) if not df_t_prog.empty else 0
-                comp = df_t_prog["Completado"].sum() if tot_t > 0 else 0
-                if tot_t == 0: e_calc = "⚪ Sin Tareas"
-                elif "🔴 Retrasado" in df_t_prog["Estatus"].values: e_calc = "🔴 Retrasado"
-                elif comp == tot_t and tot_t > 0: e_calc = "🟢 Completado"
-                else: e_calc = "🟢 En Tiempo"
-
-                okrs_data.append({
-                    "onetrack_id": user_token, "Trimestre_ID": q_n, "OKR_ID": i, "OKR_Nombre": o_nom,
-                    "Objetivo": str(get_store(f"ui_obj_{q_n}_{i}", "")), "Peso_%": float(get_store(f"ui_peso_{q_n}_{i}", 20.0) or 20.0),
-                    "Estatus_Salud": e_calc,
-                    "Recurso_Talento": str(get_store(f"ui_rec_talento_{q_n}_{i}", "")),
-                    "Recurso_Presupuesto": str(get_store(f"ui_rec_presupuesto_{q_n}_{i}", "")),
-                    "Recurso_Infraestructura": str(get_store(f"ui_rec_infra_{q_n}_{i}", "")),
-                    "Recurso_Tecnologia": str(get_store(f"ui_rec_tec_{q_n}_{i}", ""))
-                })
-
-                df_o = update_avance_resultados(get_store(f"df_outputs_{q_n}_{i}", pd.DataFrame()))
-                if not df_o.empty:
-                    for _, o_row in df_o.iterrows():
-                        if str(o_row.get("Nombre", "")).strip() != "":
-                            outputs_data.append({
-                                "onetrack_id": user_token, "Iniciativa_ID": i, "Trimestre": q_n,
-                                "Nombre": str(o_row.get("Nombre", "")), "UM": str(o_row.get("UM", "U")),
-                                "< Mejor": str(o_row.get("< Mejor", "NO")), "Meta": float(o_row.get("Meta", 0.0) or 0.0),
-                                "Real": float(o_row.get("Real", 0.0) or 0.0), "Avance": float(o_row.get("Avance %", 0.0) or 0.0)
-                            })
-
-                if not df_t_prog.empty:
-                    for _, t_row in df_t_prog.iterrows():
-                        if str(t_row.get("Tarea", "")).strip() != "":
-                            tareas_data.append({
-                                "onetrack_id": user_token, "Iniciativa_ID": i, "Trimestre": q_n,
-                                "Jerarquia": str(t_row.get("Jerarquia", "")), "Tarea": str(t_row.get("Tarea", "")),
-                                "Responsable": str(t_row.get("Responsable", "")), "Inicio": t_row.get("Inicio"),
-                                "Fin": t_row.get("Fin"), "Completado": bool(t_row.get("Completado", False))
-                            })
-
-    try:
-        with conn.engine.begin() as transaction:
-            transaction.execute(text("DELETE FROM kpis WHERE onetrack_id = :token"), {"token": user_token})
-            transaction.execute(text("DELETE FROM okrs_general WHERE onetrack_id = :token"), {"token": user_token})
-            transaction.execute(text("DELETE FROM iniciativas_outputs WHERE onetrack_id = :token"), {"token": user_token})
-            transaction.execute(text("DELETE FROM iniciativas_tareas WHERE onetrack_id = :token"), {"token": user_token})
-    except Exception: pass
-
-    cols_k_all = ["onetrack_id", "Empresa", "Puesto", "Dueno", "Logo_Cliente", "KPI_Nombre", "Tipo", "Meta", "UM", "< Mejor", "Peso_%", "Peso_Global_KPI", "Peso_Global_OKR", "U_SVerde", "U_Verde", "U_Amarillo"]
-    for q_n, meses in trimestres.items():
-        for m in meses: cols_k_all.extend([f"{m}_P", f"{m}_R"])
-
-    pd.DataFrame(kpis_data, columns=cols_k_all).to_sql("kpis", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(okrs_data, columns=["onetrack_id", "Trimestre_ID", "OKR_ID", "OKR_Nombre", "Objetivo", "Peso_%", "Estatus_Salud", "Recurso_Talento", "Recurso_Presupuesto", "Recurso_Infraestructura", "Recurso_Tecnologia"]).to_sql("okrs_general", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(outputs_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]).to_sql("iniciativas_outputs", con=conn.engine, if_exists='append', index=False)
-    pd.DataFrame(tareas_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]).to_sql("iniciativas_tareas", con=conn.engine, if_exists='append', index=False)
-
-def generar_dummy_onetest():
-    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-    cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
-    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
-
-    set_store("ui_p_kpis", 50.0)
-    set_store("ui_p_okrs", 50.0)
-    set_store("cfg_corte_rojo", 79.0)
-    set_store("cfg_corte_amarillo", 89.0)
-    set_store("cfg_corte_verde", 100.0)
-
-    for q_name, meses in trimestres.items():
-        cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
-        for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
-        df_k = pd.DataFrame(columns=cols_kpi)
-        
-        row1 = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0]
-        for _ in meses: row1.extend([166666.0, 166666.0 * mult_q[q_name], "⚪"])
-        df_k.loc[1] = row1
-
-        row2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
-        for _ in meses: row2.extend([95.0, 95.0 * mult_q[q_name], "⚪"])
-        df_k.loc[2] = row2
-
-        df_k = calcular_sem_kpis(df_k, meses, 79.0, 89.0, 100.0)
-        set_store(f"df_kpi_{q_name}", df_k)
-
-    # Q1
-    q_n = "Q1"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
-    set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
-    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
-    df_o1 = pd.DataFrame(columns=cols_out)
-    df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
-    df_t1 = pd.DataFrame(columns=cols_t)
-    df_t1.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
-    df_t1.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True, ""]
-    df_t1.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t1))
-
-    # Q2
-    q_n = "Q2"; set_store(f"num_iniciativas_{q_n}", 2)
-    set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
-    set_store(f"ui_peso_{q_n}_1", 60.0)
-    set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
-    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
-    df_o2_1 = pd.DataFrame(columns=cols_out)
-    df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
-    df_t2_1 = pd.DataFrame(columns=cols_t)
-    df_t2_1.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
-    df_t2_1.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True, ""]
-    df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
-
-    set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
-    set_store(f"ui_peso_{q_n}_2", 40.0)
-    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
-    set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
-    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_2", "-")
-    set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
-    df_o2_2 = pd.DataFrame(columns=cols_out)
-    df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
-    set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
-    df_t2_2 = pd.DataFrame(columns=cols_t)
-    df_t2_2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
-    df_t2_2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False, ""]
-    df_t2_2.loc[3] = ["3.", "Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False, ""]
-    set_store(f"df_tareas_{q_n}_2", update_estatus_tareas(df_t2_2))
-
-    # Q3
-    q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
-    set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
-    df_o3 = pd.DataFrame(columns=cols_out)
-    df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
-    df_t3 = pd.DataFrame(columns=cols_t)
-    df_t3.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
-    df_t3.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False, ""]
-    df_t3.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t3))
-
-    # Q4
-    q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
-    set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
-    df_o4 = pd.DataFrame(columns=cols_out)
-    df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
-    df_t4 = pd.DataFrame(columns=cols_t)
-    df_t4.loc[1] = ["1.", "Revisión", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
-    df_t4.loc[2] = ["2.", "Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
-    df_t4.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t4))
-
-def ejecutar_dummy_callback():
-    for key in list(st.session_state.keys()):
-        if key.startswith("editor_") or key.startswith("ui_") or key.startswith("live_") or key.startswith("cfg_"):
-            del st.session_state[key]
-    generar_dummy_onetest()
-    guardar_en_bd()
-    set_store("datos_cargados", False)
+def animacion_consolidacion_anual_realista():
+    html_code = """
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">KPIs (50%)</div><div style="font-size:20px; font-weight:bold;">95 %</div></div>
+            <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Iniciativas (50%)</div><div style="font-size:20px; font-weight:bold;">92 %</div></div>
+            <div style="background:#00b050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Total ONE TRACK</div><div style="font-size:20px; font-weight:bold;">94 %</div></div>
+        </div>
+        <table style="width:100%; border-collapse:collapse; font-size:11.5px; background:white; border:1px solid #e2e8f0; text-align:center;">
+            <thead><tr style="background:#002060; color:white;"><th style="padding:6px;">Mes</th><th>KPIs</th><th>Iniciativas</th><th>Integrado</th><th>Q</th><th>Resultado Q</th></tr></thead>
+            <tbody>
+                <tr><td style="padding:6px; font-weight:bold;">Ene</td><td>92% 🟢</td><td>88% 🟡</td><td>90% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td style="padding:6px; font-weight:bold;">Feb</td><td>96% 🟢</td><td>94% 🟢</td><td>95% 🟢</td><td>Q1</td><td>-</td></tr>
+                <tr><td style="padding:6px; font-weight:bold;">Mar</td><td>98% 🟢</td><td>95% 🟢</td><td>97% 🟢</td><td>Q1</td><td style="font-weight:bold; background:#f0fdf4;">94% 🟢</td></tr>
+            </tbody>
+        </table>
+    </div>
+    """
+    components.html(html_code, height=210)
 
 # ==============================================================================
-# 4. COMPONENTES DE SIMULACION HTML
-# ==============================================================================
-# (Los definimos en funciones para que esten accesibles en Guía de Uso)
-
-# ==============================================================================
-# 5. FLUJO PROCEDURAL DE EJECUCIÓN (ACCESO, HEADER Y VISTAS)
+# 4. FLUJO DE AUTENTICACION, HEADER Y EJECUCIÓN
 # ==============================================================================
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -645,13 +549,14 @@ with col_btn:
         st.success("Guardado exitoso.")
 st.write("")
 
-# --- VISTAS ---
+# --- RUTEO DE VISTAS ---
 if st.session_state.vista_actual == "Guía de Uso":
     st.markdown("<div class='section-title'>📖 Guía Integral de Uso - ONE TRACK Workspace</div>", unsafe_allow_html=True)
     st.markdown("""
     Esta guía te proporciona un recorrido detallado paso a paso para configurar, operar e interpretar cada sección de tu tablero estratégico. Todas las simulaciones a continuación replican el comportamiento real de la aplicación.
     """)
     
+    # 1. PONDERACIÓN
     st.markdown("<div class='sub-section-title'>1. La Doble Ponderación en ONE TRACK</div>", unsafe_allow_html=True)
     st.markdown("""
     <div class='guide-callout'>
@@ -661,6 +566,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     </div>
     """, unsafe_allow_html=True)
 
+    # 2. TABLA KPIS
     st.markdown("<div class='sub-section-title'>2. Configuración y Llenado de KPIs Mensuales</div>", unsafe_allow_html=True)
     st.write("""
     Para ingresar un indicador clave de desempeño en la tabla:
@@ -675,6 +581,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     """)
     animacion_kpis_realista()
 
+    # 3. INICIATIVAS Y RESULTADOS
     st.markdown("<div class='sub-section-title'>3. Iniciativas Estratégicas y Resultados Cuantitativos</div>", unsafe_allow_html=True)
     st.write("""
     Cada iniciativa representa una apuesta táctica mayor para mover tus KPIs:
@@ -684,6 +591,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     """)
     animacion_iniciativa_completa_realista()
 
+    # 4. GANTT Y TAREAS
     st.markdown("<div class='sub-section-title'>4. Plan de Acción y Cronograma Gantt</div>", unsafe_allow_html=True)
     st.write("""
     El motor de seguimiento táctico de cada iniciativa:
@@ -695,6 +603,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     """)
     animacion_gantt_tareas_realista()
 
+    # 5. RECURSOS 2X2
     st.markdown("<div class='sub-section-title'>5. Recursos Requeridos para la Iniciativa (Cuadrícula 2×2)</div>", unsafe_allow_html=True)
     st.write("""
     Al pie de cada iniciativa, dispones de 4 bloques para asegurar la viabilidad del proyecto antes de arrancar:
@@ -705,6 +614,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     """)
     animacion_recursos_realista()
 
+    # 6. SEMAFORIZACIÓN CONTINUA
     st.markdown("<div class='sub-section-title'>6. Parámetros de Semáforo (Intervalos Continuos)</div>", unsafe_allow_html=True)
     st.write("""
     En la pestaña **Configuración de ONE Track**, ajustas los 3 cortes porcentuales institucionales. El sistema genera rangos continuos matemáticamente consistentes sin solapamientos:
@@ -715,6 +625,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     """)
     animacion_intervalos_realista()
 
+    # 7. TABLERO ANUAL
     st.markdown("<div class='sub-section-title'>7. Consolidación de Resultados y Tablero Anual</div>", unsafe_allow_html=True)
     st.write("""
     En la pestaña **Resumen Anual**, la plataforma consolida la totalidad del año fiscal:
@@ -747,9 +658,9 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
             bind_number_input("Ini", "ui_p_okrs", 50.0)
         st.markdown("</div>", unsafe_allow_html=True)
 
-    c_rojo = float(get_store("cfg_corte_rojo", 79.0))
-    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0))
-    c_verde = float(get_store("cfg_corte_verde", 100.0))
+    c_rojo = float(get_store("cfg_corte_rojo", 79.0) or 79.0)
+    c_amarillo = float(get_store("cfg_corte_amarillo", 89.0) or 89.0)
+    c_verde = float(get_store("cfg_corte_verde", 100.0) or 100.0)
 
     if st.session_state.vista_actual in trimestres.keys():
         q_name = st.session_state.vista_actual
@@ -781,7 +692,7 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
         render_footer(edited_kpi, meses_q)
 
         st.markdown(f"<div class='section-title'>Iniciativas Estratégicas - {q_name}</div>", unsafe_allow_html=True)
-        num_i = int(get_store(f"num_iniciativas_{q_name}", 1))
+        num_i = int(get_store(f"num_iniciativas_{q_name}", 1) or 1)
         
         for i in range(1, num_i + 1):
             st.markdown("<div class='iniciativa-box'>", unsafe_allow_html=True)
@@ -915,10 +826,10 @@ elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vist
         res_k = (acum_k / (t_peso_k / 100.0)) if t_peso_k > 0 else 0.0
 
         t_peso_o, acum_o = 0.0, 0.0
-        num_i = int(get_store(f"num_iniciativas_{q_name}", 1))
+        num_i = int(get_store(f"num_iniciativas_{q_name}", 1) or 1)
         for i in range(1, num_i + 1):
             if str(get_store(f"ui_nom_{q_name}_{i}", "")).strip():
-                peso_o = float(get_store(f"ui_peso_{q_name}_{i}", 0.0))
+                peso_o = float(get_store(f"ui_peso_{q_name}_{i}", 0.0) or 0.0)
                 df_o = st.session_state.get(f"live_out_{q_name}_{i}", get_store(f"df_outputs_{q_name}_{i}", pd.DataFrame()))
                 df_o = update_avance_resultados(df_o)
                 cump_resultados = 0.0
@@ -1018,9 +929,9 @@ elif st.session_state.vista_actual == "Configuración de ONE Track":
     st.markdown("<div class='sub-section-title'>🎨 Intervalos del Semáforo de Desempeño</div>", unsafe_allow_html=True)
     st.info("Configura los 3 puntos de corte. El sistema genera automáticamente intervalos continuos sin porcentajes repetidos.")
     
-    c_r = float(get_store("cfg_corte_rojo", 79.0))
-    c_a = float(get_store("cfg_corte_amarillo", 89.0))
-    c_v = float(get_store("cfg_corte_verde", 100.0))
+    c_r = float(get_store("cfg_corte_rojo", 79.0) or 79.0)
+    c_a = float(get_store("cfg_corte_amarillo", 89.0) or 89.0)
+    c_v = float(get_store("cfg_corte_verde", 100.0) or 100.0)
 
     col_int1, col_int2 = st.columns([1.2, 1])
     with col_int1:
