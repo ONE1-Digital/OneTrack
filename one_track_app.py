@@ -774,7 +774,7 @@ ANIMACIONES_HTML = {
         """
     },
     "recursos": {
-        "height": 170,
+        "height": 270,
         "html": """
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
