@@ -244,7 +244,7 @@ def get_mes_cump(m, q_name):
     return res_k, res_o, res_tot
 
 # ==============================================================================
-# FASE 3: RUTINAS DE BASE DE DATOS Y GESTIÓN DE ESTADO
+# FASE 3: RUTINAS DE BASE DE DATOS Y GESTIÓN DE DATOS
 # ==============================================================================
 def commit_live_edits():
     c_r = float(get_store("cfg_corte_rojo", 79.0) or 79.0)
@@ -595,7 +595,268 @@ def ejecutar_dummy_callback():
     set_store("datos_cargados", False)
 
 # ==============================================================================
-# FASE 4: CONTROL DE SESION / ACCESO
+# FASE 4: MOTOR DE SIMULACIONES INTERACTIVAS HTML5/JS
+# ==============================================================================
+ANIMACIONES_HTML = {
+    "kpis": {
+        "height": 135,
+        "html": """
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 10px rgba(0,0,0,0.06); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
+                <thead><tr>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:25%; text-align:left;">KPI</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:10%; text-align:center;">Tipo</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:9%; text-align:center;">Meta</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:7%; text-align:center;">UM</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:7%; text-align:center;">< Mejor</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:8%; text-align:center;">Peso %</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:11%; text-align:center;">Ene Prog</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:11%; text-align:center;">Ene Real</th>
+                    <th style="background:#002060; color:white; padding:10px 8px; width:12%; text-align:center;">Ene Semáforo</th>
+                </tr></thead>
+                <tbody><tr>
+                    <td style="padding:9px 8px; text-align:left; border:1px solid #e2e8f0; font-weight:600;"><span id="kpi_nombre"></span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">Acumulado</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_meta"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">$</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">NO</span></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_peso"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_p1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-weight:600;" id="kpi_r1"></td>
+                    <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0; font-size:16px;" id="kpi_sem">⚪</td>
+                </tr></tbody>
+            </table>
+        </div>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('kpi_nombre').innerText = ""; document.getElementById('kpi_meta').innerText = "";
+                    document.getElementById('kpi_peso').innerText = ""; document.getElementById('kpi_p1').innerText = "";
+                    document.getElementById('kpi_r1').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪";
+                    await wait(800);
+                    let t = "Ventas Nuevos Clientes";
+                    for(let i=0; i<t.length; i++) { document.getElementById('kpi_nombre').innerText += t[i]; await wait(40); }
+                    await wait(300); document.getElementById('kpi_meta').innerText = "500,000";
+                    await wait(300); document.getElementById('kpi_peso').innerText = "50 %";
+                    await wait(400); document.getElementById('kpi_p1').innerText = "40,000";
+                    await wait(400); document.getElementById('kpi_r1').innerText = "42,500";
+                    await wait(300); document.getElementById('kpi_sem').innerText = "🟢";
+                    await wait(3500);
+                }
+            } loop();
+        </script>
+        """
+    },
+    "iniciativa": {
+        "height": 330,
+        "html": """
+        <div style="background: #ffffff; border: 1px solid #cbd5e1; border-radius: 10px; padding: 18px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <div style="background:#002060; color:white; padding:8px 16px; border-radius:8px; font-weight:900;">Iniciativa #1</div>
+                <div id="pill_cump" style="padding:8px 15px; border-radius:6px; font-weight:900; font-size:13px; color:white; background:#64748b;">CUMPLIMIENTO: 0.0%</div>
+            </div>
+            <div style="display:grid; grid-template-columns:3fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">NOMBRE</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; display:flex; align-items:center;" id="ini_nom"></div></div>
+                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PONDERACIÓN (%)</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold;" id="ini_peso"></div></div>
+                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">ESTATUS</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#64748b;" id="ini_est">⚪ Sin Tareas</div></div>
+            </div>
+            <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">OBJETIVO</div>
+            <div style="height:55px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:12.5px; line-height:1.3; margin-bottom:12px;" id="ini_obj"></div>
+            <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e2e8f0;">
+                <thead><tr style="background:#002060; color:white;"><th style="padding:6px; text-align:left;">Resultado</th><th>UM</th><th>Meta</th><th>Real</th><th>Avance %</th></tr></thead>
+                <tbody><tr><td style="padding:6px;" id="r1_nom">-</td><td style="padding:6px; text-align:center;" id="r1_um">-</td><td style="padding:6px; text-align:center;" id="r1_meta">-</td><td style="padding:6px; text-align:center;" id="r1_real">-</td><td style="padding:6px; text-align:center; font-weight:bold;" id="r1_av">-</td></tr></tbody>
+            </table>
+        </div>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('ini_nom').innerText = ""; document.getElementById('ini_peso').innerText = "";
+                    document.getElementById('ini_obj').innerText = ""; document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
+                    document.getElementById('ini_est').style.color = "#64748b"; document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 0.0%";
+                    document.getElementById('pill_cump').style.background = "#64748b"; document.getElementById('r1_nom').innerText = "-";
+                    document.getElementById('r1_um').innerText = "-"; document.getElementById('r1_meta').innerText = "-";
+                    document.getElementById('r1_real').innerText = "-"; document.getElementById('r1_av').innerText = "-";
+                    document.getElementById('r1_av').style.color = "black";
+                    await wait(800);
+                    let t = "Lanzamiento de Plataforma B2B";
+                    for(let i=0; i<t.length; i++) { document.getElementById('ini_nom').innerText += t[i]; await wait(30); }
+                    await wait(200); document.getElementById('ini_peso').innerText = "60.0";
+                    await wait(200); document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
+                    await wait(400); document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
+                    document.getElementById('r1_um').innerText = "U"; document.getElementById('r1_meta').innerText = "50";
+                    await wait(400); document.getElementById('r1_real').innerText = "50";
+                    await wait(200); document.getElementById('r1_av').innerText = "100.0 %";
+                    document.getElementById('r1_av').style.color = "#00b050";
+                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 100.0%";
+                    document.getElementById('pill_cump').style.background = "#00b050";
+                    document.getElementById('ini_est').innerText = "🟢 En Tiempo";
+                    document.getElementById('ini_est').style.color = "#00b050";
+                    await wait(3500);
+                }
+            } loop();
+        </script>
+        """
+    },
+    "gantt": {
+        "height": 225,
+        "html": """
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 12px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 12px;">
+            <table style="width: 100%; border-collapse: collapse;">
+                <thead><tr style="background: #002060; color: white;">
+                    <th style="padding: 7px;">Jerarquía</th><th style="padding: 7px; text-align: left;">Tarea</th><th>Responsable</th><th>Fin</th><th>Comp.</th><th>Estatus</th>
+                </tr></thead>
+                <tbody>
+                    <tr>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.</td>
+                        <td style="padding:7px; border:1px solid #e2e8f0;">Requerimientos funcionales</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Ana</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">12 Feb</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" checked disabled></td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; color:#00b050; font-weight:bold;">🟢 A tiempo</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">1.1</td>
+                        <td style="padding:7px; border:1px solid #e2e8f0;">Pruebas QA en servidor</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">Luis</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;">25 Feb</td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0;"><input type="checkbox" id="chk2"></td>
+                        <td style="padding:7px; text-align:center; border:1px solid #e2e8f0; font-weight:bold; color:#ff0000;" id="st2">🔴 Retrasado</td>
+                    </tr>
+                </tbody>
+            </table>
+            <div style="margin-top:12px; padding-top:8px; border-top:2px dashed #e2e8f0;">
+                <div style="display:flex; align-items:center; margin-bottom:5px;">
+                    <div style="width:130px; font-weight:bold;">1. Requerimientos</div>
+                    <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div style="width:40%; height:100%; background:#002060; border-radius:4px;"></div></div>
+                </div>
+                <div style="display:flex; align-items:center;">
+                    <div style="width:130px; font-weight:bold;">1.1 Pruebas QA</div>
+                    <div style="flex:1; background:#f1f5f9; height:16px; border-radius:4px; position:relative;"><div id="bar2" style="left:40%; width:45%; height:100%; background:#a0aabf; border-radius:4px; position:absolute;"></div></div>
+                </div>
+            </div>
+        </div>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('chk2').checked = false; document.getElementById('st2').innerText = "🔴 Retrasado";
+                    document.getElementById('st2').style.color = "#ff0000"; document.getElementById('bar2').style.background = "#a0aabf";
+                    await wait(2000);
+                    document.getElementById('chk2').checked = true; await wait(300);
+                    document.getElementById('st2').innerText = "🟢 A tiempo"; document.getElementById('st2').style.color = "#00b050";
+                    document.getElementById('bar2').style.background = "#002060"; await wait(3500);
+                }
+            } loop();
+        </script>
+        """
+    },
+    "recursos": {
+        "height": 170,
+        "html": """
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TALENTO</div>
+                <div style="font-size:12px; color:#334155; height:45px;" id="txt_tal"></div>
+            </div>
+            <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PRESUPUESTO $</div>
+                <div style="font-size:12px; color:#334155; height:45px;" id="txt_pre"></div>
+            </div>
+            <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">INFRAESTRUCTURA</div>
+                <div style="font-size:12px; color:#334155; height:45px;" id="txt_inf"></div>
+            </div>
+            <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TECNOLOGÍA</div>
+                <div style="font-size:12px; color:#334155; height:45px;" id="txt_tec"></div>
+            </div>
+        </div>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('txt_tal').innerText = ""; document.getElementById('txt_pre').innerText = "";
+                    document.getElementById('txt_inf').innerText = ""; document.getElementById('txt_tec').innerText = "";
+                    await wait(600);
+                    document.getElementById('txt_tal').innerText = "1 Tech Lead, 2 Desarrolladores, 1 Analista QA"; await wait(250);
+                    document.getElementById('txt_pre').innerText = "$180,000 MXN para licencias y consultoría"; await wait(250);
+                    document.getElementById('txt_inf').innerText = "Servidores AWS Staging y Producción, VPN"; await wait(250);
+                    document.getElementById('txt_tec').innerText = "Docker, GitHub Enterprise, Supabase Cloud"; await wait(3500);
+                }
+            } loop();
+        </script>
+        """
+    },
+    "intervalos": {
+        "height": 170,
+        "html": """
+        <div style="display:flex; gap:15px; align-items:center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Rojo (%)</div>
+                <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;" id="r_val">79</div>
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Amarillo (%)</div>
+                <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold; margin-bottom:6px;">89</div>
+                <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:2px;">Límite Verde (%)</div>
+                <div style="border:1px solid #cbd5e1; border-radius:4px; padding:4px 8px; font-weight:bold;">100</div>
+            </div>
+            <div style="flex:1.5; display:flex; flex-direction:column; gap:5px;">
+                <div style="background:#ff0000; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🔴 BAJO</span><span id="txt_r">Menor o igual a 79%</span></div>
+                <div style="background:#ffff00; color:black; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟡 MEDIO</span><span id="txt_a">De 80% a 89%</span></div>
+                <div style="background:#92d050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 META</span><span>De 90% a 100%</span></div>
+                <div style="background:#00b050; color:white; border-radius:6px; padding:6px 10px; font-weight:bold; font-size:11.5px; display:flex; justify-content:space-between;"><span>🟢 SOBRESALIENTE</span><span>Mayor a 100%</span></div>
+            </div>
+        </div>
+        <script>
+            const wait = ms => new Promise(r => setTimeout(r, ms));
+            async function loop() {
+                while(true) {
+                    document.getElementById('r_val').innerText = "79"; document.getElementById('txt_r').innerText = "Menor o igual a 79%";
+                    document.getElementById('txt_a').innerText = "De 80% a 89%"; await wait(1800);
+                    document.getElementById('r_val').innerText = "69"; document.getElementById('txt_r').innerText = "Menor o igual a 69%";
+                    document.getElementById('txt_a').innerText = "De 70% a 89%"; await wait(3500);
+                }
+            } loop();
+        </script>
+        """
+    },
+    "consolidacion": {
+        "height": 210,
+        "html": """
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+            <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px; margin-bottom:10px;">
+                <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">KPIs (50%)</div><div style="font-size:20px; font-weight:bold;">95 %</div></div>
+                <div style="background:#92d050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Iniciativas (50%)</div><div style="font-size:20px; font-weight:bold;">92 %</div></div>
+                <div style="background:#00b050; color:white; border-radius:8px; padding:10px; text-align:center;"><div style="font-size:10px; font-weight:bold;">Total ONE TRACK</div><div style="font-size:20px; font-weight:bold;">94 %</div></div>
+            </div>
+            <table style="width:100%; border-collapse:collapse; font-size:11.5px; background:white; border:1px solid #e2e8f0; text-align:center;">
+                <thead><tr style="background:#002060; color:white;"><th style="padding:6px;">Mes</th><th>KPIs</th><th>Iniciativas</th><th>Integrado</th><th>Q</th><th>Resultado Q</th></tr></thead>
+                <tbody>
+                    <tr><td style="padding:6px; font-weight:bold;">Ene</td><td>92% 🟢</td><td>88% 🟡</td><td>90% 🟢</td><td>Q1</td><td>-</td></tr>
+                    <tr><td style="padding:6px; font-weight:bold;">Feb</td><td>96% 🟢</td><td>94% 🟢</td><td>95% 🟢</td><td>Q1</td><td>-</td></tr>
+                    <tr><td style="padding:6px; font-weight:bold;">Mar</td><td>98% 🟢</td><td>95% 🟢</td><td>97% 🟢</td><td>Q1</td><td style="font-weight:bold; background:#f0fdf4;">94% 🟢</td></tr>
+                </tbody>
+            </table>
+        </div>
+        """
+    }
+}
+
+def mostrar_animacion(clave):
+    if clave in ANIMACIONES_HTML:
+        components.html(ANIMACIONES_HTML[clave]["html"], height=ANIMACIONES_HTML[clave]["height"])
+
+# Alias explícitos para compatibilidad y prevención de NameError
+animacion_kpis_realista = lambda: mostrar_animacion("kpis")
+animacion_iniciativa_completa_realista = lambda: mostrar_animacion("iniciativa")
+animacion_gantt_tareas_realista = lambda: mostrar_animacion("gantt")
+animacion_recursos_realista = lambda: mostrar_animacion("recursos")
+animacion_intervalos_realista = lambda: mostrar_animacion("intervalos")
+animacion_consolidacion_anual_realista = lambda: mostrar_animacion("consolidacion")
+
+# ==============================================================================
+# FASE 5: CONTROL DE SESION / ACCESO
 # ==============================================================================
 if 'user_info' not in st.session_state or st.session_state.user_info is None:
     st.markdown("<br><br>", unsafe_allow_html=True)
@@ -689,7 +950,7 @@ with col_btn:
 st.write("")
 
 # ==============================================================================
-# FASE 5: RUTEO DE PESTAÑAS
+# FASE 6: RUTEO DE PESTAÑAS
 # ==============================================================================
 if st.session_state.vista_actual == "Guía de Uso":
     st.markdown("<div class='section-title'>📖 Guía Integral de Uso - ONE TRACK Workspace</div>", unsafe_allow_html=True)
@@ -720,7 +981,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     4. **< Mejor (Menor es mejor):** Si marcas **SI**, la fórmula premia valores bajos (mermas, rotación, costos) invirtiendo el cálculo: $(\\text{Prog} / \\text{Real}) \\times 100$.
     5. **Tríada Mensual (Prog - Real - Semáforo):** Captura lo programado y lo ejecutado. El círculo de semáforo (`●`) se proyecta automáticamente evaluando tu desempeño frente a los intervalos configurados.
     """)
-    animacion_kpis_realista()
+    mostrar_animacion("kpis")
 
     # 3. INICIATIVAS Y RESULTADOS
     st.markdown("<div class='sub-section-title'>3. Iniciativas Estratégicas y Resultados Cuantitativos</div>", unsafe_allow_html=True)
@@ -730,7 +991,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Ponderación (%):** Asigna el porcentaje que representa esta iniciativa dentro del total del trimestre.
     * **Resultados de la Iniciativa:** A diferencia de las tareas del día a día, esta tabla define los **entregables cuantitativos de impacto** (ej. *Clientes B2B activos*). Al llenar la **Meta** y lo **Realizado**, el sistema calcula el **Avance %** de cada entregable y actualiza la tarjeta superior: **CUMPLIMIENTO DE RESULTADOS**.
     """)
-    animacion_iniciativa_completa_realista()
+    mostrar_animacion("iniciativa")
 
     # 4. GANTT Y TAREAS
     st.markdown("<div class='sub-section-title'>4. Plan de Acción y Cronograma Gantt</div>", unsafe_allow_html=True)
@@ -742,7 +1003,7 @@ if st.session_state.vista_actual == "Guía de Uso":
       - Si la fecha límite ya venció y la casilla no está marcada: **🔴 Retrasado** automáticamente.
     * **Gantt Visual:** El cronograma inferior dibuja las barras de duración en tiempo real.
     """)
-    animacion_gantt_tareas_realista()
+    mostrar_animacion("gantt")
 
     # 5. RECURSOS 2X2
     st.markdown("<div class='sub-section-title'>5. Recursos Requeridos para la Iniciativa (Cuadrícula 2×2)</div>", unsafe_allow_html=True)
@@ -753,7 +1014,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **Infraestructura:** Oficinas, almacenes, servidores o equipamiento físico necesario.
     * **Tecnología:** Softwares, APIs, accesos a bases de datos o plataformas requeridas.
     """)
-    animacion_recursos_realista()
+    mostrar_animacion("recursos")
 
     # 6. SEMAFORIZACIÓN CONTINUA
     st.markdown("<div class='sub-section-title'>6. Parámetros de Semáforo (Intervalos Continuos)</div>", unsafe_allow_html=True)
@@ -764,7 +1025,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * **🟢 Meta (Verde):** Rendimientos que cumplen la meta aprobada (ej. $90\\%$ a $100\\%$).
     * **🟢 Sobresaliente (Súper Verde):** Rendimientos por encima del $100\\%$.
     """)
-    animacion_intervalos_realista()
+    mostrar_animacion("intervalos")
 
     # 7. TABLERO ANUAL
     st.markdown("<div class='sub-section-title'>7. Consolidación de Resultados y Tablero Anual</div>", unsafe_allow_html=True)
@@ -774,7 +1035,7 @@ if st.session_state.vista_actual == "Guía de Uso":
     * La tabla anual despliega cada mes con su porcentaje y su círculo evaluador correspondiente.
     * El gráfico de tendencias compara mes con mes la curva de resultados de negocio frente al ritmo de avance de proyectos.
     """)
-    animacion_consolidacion_anual_realista()
+    mostrar_animacion("consolidacion")
 
 elif st.session_state.vista_actual in trimestres.keys() or st.session_state.vista_actual == "Resumen Anual":
     
