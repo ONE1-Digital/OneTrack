@@ -595,7 +595,7 @@ def ejecutar_dummy_callback():
     set_store("datos_cargados", False)
 
 # ==============================================================================
-# FASE 4: MOTOR DE SIMULACIONES INTERACTIVAS HTML5/JS
+# FASE 4: MOTOR DE SIMULACIONES INTERACTIVAS HTML5/JS (CON ESPACIADO CORREGIDO)
 # ==============================================================================
 ANIMACIONES_HTML = {
     "kpis": {
@@ -615,7 +615,7 @@ ANIMACIONES_HTML = {
                     <th style="background:#002060; color:white; padding:10px 8px; width:12%; text-align:center;">Ene Semáforo</th>
                 </tr></thead>
                 <tbody><tr>
-                    <td style="padding:9px 8px; text-align:left; border:1px solid #e2e8f0; font-weight:600;"><span id="kpi_nombre"></span></td>
+                    <td style="padding:9px 8px; text-align:left; border:1px solid #e2e8f0; font-weight:600; white-space: pre-wrap;"><span id="kpi_nombre"></span></td>
                     <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">Acumulado</span></td>
                     <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;" id="kpi_meta"></td>
                     <td style="padding:9px 8px; text-align:center; border:1px solid #e2e8f0;"><span style="background:#f8fafc; border:1px solid #cbd5e1; border-radius:4px; padding:3px 6px; font-size:11px; font-weight:bold;">$</span></td>
@@ -631,17 +631,22 @@ ANIMACIONES_HTML = {
             const wait = ms => new Promise(r => setTimeout(r, ms));
             async function loop() {
                 while(true) {
-                    document.getElementById('kpi_nombre').innerText = ""; document.getElementById('kpi_meta').innerText = "";
-                    document.getElementById('kpi_peso').innerText = ""; document.getElementById('kpi_p1').innerText = "";
-                    document.getElementById('kpi_r1').innerText = ""; document.getElementById('kpi_sem').innerText = "⚪";
+                    document.getElementById('kpi_nombre').textContent = ""; document.getElementById('kpi_meta').textContent = "";
+                    document.getElementById('kpi_peso').textContent = ""; document.getElementById('kpi_p1').textContent = "";
+                    document.getElementById('kpi_r1').textContent = ""; document.getElementById('kpi_sem').textContent = "⚪";
                     await wait(800);
                     let t = "Ventas Nuevos Clientes";
-                    for(let i=0; i<t.length; i++) { document.getElementById('kpi_nombre').innerText += t[i]; await wait(40); }
-                    await wait(300); document.getElementById('kpi_meta').innerText = "500,000";
-                    await wait(300); document.getElementById('kpi_peso').innerText = "50 %";
-                    await wait(400); document.getElementById('kpi_p1').innerText = "40,000";
-                    await wait(400); document.getElementById('kpi_r1').innerText = "42,500";
-                    await wait(300); document.getElementById('kpi_sem').innerText = "🟢";
+                    let acum = "";
+                    for(let i=0; i<t.length; i++) { 
+                        acum += t[i]; 
+                        document.getElementById('kpi_nombre').textContent = acum; 
+                        await wait(40); 
+                    }
+                    await wait(300); document.getElementById('kpi_meta').textContent = "500,000";
+                    await wait(300); document.getElementById('kpi_peso').textContent = "50 %";
+                    await wait(400); document.getElementById('kpi_p1').textContent = "40,000";
+                    await wait(400); document.getElementById('kpi_r1').textContent = "42,500";
+                    await wait(300); document.getElementById('kpi_sem').textContent = "🟢";
                     await wait(3500);
                 }
             } loop();
@@ -657,12 +662,21 @@ ANIMACIONES_HTML = {
                 <div id="pill_cump" style="padding:8px 15px; border-radius:6px; font-weight:900; font-size:13px; color:white; background:#64748b;">CUMPLIMIENTO: 0.0%</div>
             </div>
             <div style="display:grid; grid-template-columns:3fr 1fr 1fr; gap:10px; margin-bottom:10px;">
-                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">NOMBRE</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; display:flex; align-items:center;" id="ini_nom"></div></div>
-                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PONDERACIÓN (%)</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold;" id="ini_peso"></div></div>
-                <div><div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">ESTATUS</div><div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#64748b;" id="ini_est">⚪ Sin Tareas</div></div>
+                <div>
+                    <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">NOMBRE</div>
+                    <div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; padding:0 8px; display:flex; align-items:center; white-space: pre-wrap; font-size:13px;" id="ini_nom"></div>
+                </div>
+                <div>
+                    <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PONDERACIÓN (%)</div>
+                    <div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold;" id="ini_peso"></div>
+                </div>
+                <div>
+                    <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">ESTATUS</div>
+                    <div style="height:35px; border:1px solid #cbd5e1; border-radius:6px; display:flex; align-items:center; justify-content:center; font-weight:bold; color:#64748b;" id="ini_est">⚪ Sin Tareas</div>
+                </div>
             </div>
             <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">OBJETIVO</div>
-            <div style="height:55px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:12.5px; line-height:1.3; margin-bottom:12px;" id="ini_obj"></div>
+            <div style="height:55px; border:1px solid #cbd5e1; border-radius:6px; padding:6px 8px; font-size:12.5px; line-height:1.3; margin-bottom:12px; white-space: pre-wrap;" id="ini_obj"></div>
             <table style="width:100%; border-collapse:collapse; font-size:12px; border:1px solid #e2e8f0;">
                 <thead><tr style="background:#002060; color:white;"><th style="padding:6px; text-align:left;">Resultado</th><th>UM</th><th>Meta</th><th>Real</th><th>Avance %</th></tr></thead>
                 <tbody><tr><td style="padding:6px;" id="r1_nom">-</td><td style="padding:6px; text-align:center;" id="r1_um">-</td><td style="padding:6px; text-align:center;" id="r1_meta">-</td><td style="padding:6px; text-align:center;" id="r1_real">-</td><td style="padding:6px; text-align:center; font-weight:bold;" id="r1_av">-</td></tr></tbody>
@@ -672,26 +686,33 @@ ANIMACIONES_HTML = {
             const wait = ms => new Promise(r => setTimeout(r, ms));
             async function loop() {
                 while(true) {
-                    document.getElementById('ini_nom').innerText = ""; document.getElementById('ini_peso').innerText = "";
-                    document.getElementById('ini_obj').innerText = ""; document.getElementById('ini_est').innerText = "⚪ Sin Tareas";
-                    document.getElementById('ini_est').style.color = "#64748b"; document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 0.0%";
-                    document.getElementById('pill_cump').style.background = "#64748b"; document.getElementById('r1_nom').innerText = "-";
-                    document.getElementById('r1_um').innerText = "-"; document.getElementById('r1_meta').innerText = "-";
-                    document.getElementById('r1_real').innerText = "-"; document.getElementById('r1_av').innerText = "-";
+                    document.getElementById('ini_nom').textContent = ""; document.getElementById('ini_peso').textContent = "";
+                    document.getElementById('ini_obj').textContent = ""; document.getElementById('ini_est').textContent = "⚪ Sin Tareas";
+                    document.getElementById('ini_est').style.color = "#64748b"; document.getElementById('pill_cump').textContent = "CUMPLIMIENTO: 0.0%";
+                    document.getElementById('pill_cump').style.background = "#64748b"; document.getElementById('r1_nom').textContent = "-";
+                    document.getElementById('r1_um').textContent = "-"; document.getElementById('r1_meta').textContent = "-";
+                    document.getElementById('r1_real').textContent = "-"; document.getElementById('r1_av').textContent = "-";
                     document.getElementById('r1_av').style.color = "black";
                     await wait(800);
+                    
                     let t = "Lanzamiento de Plataforma B2B";
-                    for(let i=0; i<t.length; i++) { document.getElementById('ini_nom').innerText += t[i]; await wait(30); }
-                    await wait(200); document.getElementById('ini_peso').innerText = "60.0";
-                    await wait(200); document.getElementById('ini_obj').innerText = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
-                    await wait(400); document.getElementById('r1_nom').innerText = "Clientes B2B Activos";
-                    document.getElementById('r1_um').innerText = "U"; document.getElementById('r1_meta').innerText = "50";
-                    await wait(400); document.getElementById('r1_real').innerText = "50";
-                    await wait(200); document.getElementById('r1_av').innerText = "100.0 %";
+                    let acum = "";
+                    for(let i=0; i<t.length; i++) { 
+                        acum += t[i]; 
+                        document.getElementById('ini_nom').textContent = acum; 
+                        await wait(35); 
+                    }
+                    
+                    await wait(200); document.getElementById('ini_peso').textContent = "60.0";
+                    await wait(200); document.getElementById('ini_obj').textContent = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
+                    await wait(400); document.getElementById('r1_nom').textContent = "Clientes B2B Activos";
+                    document.getElementById('r1_um').textContent = "U"; document.getElementById('r1_meta').textContent = "50";
+                    await wait(400); document.getElementById('r1_real').textContent = "50";
+                    await wait(200); document.getElementById('r1_av').textContent = "100.0 %";
                     document.getElementById('r1_av').style.color = "#00b050";
-                    document.getElementById('pill_cump').innerText = "CUMPLIMIENTO: 100.0%";
+                    document.getElementById('pill_cump').textContent = "CUMPLIMIENTO: 100.0%";
                     document.getElementById('pill_cump').style.background = "#00b050";
-                    document.getElementById('ini_est').innerText = "🟢 En Tiempo";
+                    document.getElementById('ini_est').textContent = "🟢 En Tiempo";
                     document.getElementById('ini_est').style.color = "#00b050";
                     await wait(3500);
                 }
@@ -758,32 +779,32 @@ ANIMACIONES_HTML = {
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
                 <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TALENTO</div>
-                <div style="font-size:12px; color:#334155; height:45px;" id="txt_tal"></div>
+                <div style="font-size:12px; color:#334155; height:45px; white-space: pre-wrap;" id="txt_tal"></div>
             </div>
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
                 <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">PRESUPUESTO $</div>
-                <div style="font-size:12px; color:#334155; height:45px;" id="txt_pre"></div>
+                <div style="font-size:12px; color:#334155; height:45px; white-space: pre-wrap;" id="txt_pre"></div>
             </div>
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
                 <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">INFRAESTRUCTURA</div>
-                <div style="font-size:12px; color:#334155; height:45px;" id="txt_inf"></div>
+                <div style="font-size:12px; color:#334155; height:45px; white-space: pre-wrap;" id="txt_inf"></div>
             </div>
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
                 <div style="font-size:11px; font-weight:900; color:#002060; margin-bottom:4px;">TECNOLOGÍA</div>
-                <div style="font-size:12px; color:#334155; height:45px;" id="txt_tec"></div>
+                <div style="font-size:12px; color:#334155; height:45px; white-space: pre-wrap;" id="txt_tec"></div>
             </div>
         </div>
         <script>
             const wait = ms => new Promise(r => setTimeout(r, ms));
             async function loop() {
                 while(true) {
-                    document.getElementById('txt_tal').innerText = ""; document.getElementById('txt_pre').innerText = "";
-                    document.getElementById('txt_inf').innerText = ""; document.getElementById('txt_tec').innerText = "";
+                    document.getElementById('txt_tal').textContent = ""; document.getElementById('txt_pre').textContent = "";
+                    document.getElementById('txt_inf').textContent = ""; document.getElementById('txt_tec').textContent = "";
                     await wait(600);
-                    document.getElementById('txt_tal').innerText = "1 Tech Lead, 2 Desarrolladores, 1 Analista QA"; await wait(250);
-                    document.getElementById('txt_pre').innerText = "$180,000 MXN para licencias y consultoría"; await wait(250);
-                    document.getElementById('txt_inf').innerText = "Servidores AWS Staging y Producción, VPN"; await wait(250);
-                    document.getElementById('txt_tec').innerText = "Docker, GitHub Enterprise, Supabase Cloud"; await wait(3500);
+                    document.getElementById('txt_tal').textContent = "1 Tech Lead, 2 Desarrolladores, 1 Analista QA"; await wait(250);
+                    document.getElementById('txt_pre').textContent = "$180,000 MXN para licencias y consultoría"; await wait(250);
+                    document.getElementById('txt_inf').textContent = "Servidores AWS Staging y Producción, VPN"; await wait(250);
+                    document.getElementById('txt_tec').textContent = "Docker, GitHub Enterprise, Supabase Cloud"; await wait(3500);
                 }
             } loop();
         </script>
@@ -847,7 +868,7 @@ def mostrar_animacion(clave):
     if clave in ANIMACIONES_HTML:
         components.html(ANIMACIONES_HTML[clave]["html"], height=ANIMACIONES_HTML[clave]["height"])
 
-# Alias explícitos para compatibilidad y prevención de NameError
+# Alias explícitos a prueba de fallos
 animacion_kpis_realista = lambda: mostrar_animacion("kpis")
 animacion_iniciativa_completa_realista = lambda: mostrar_animacion("iniciativa")
 animacion_gantt_tareas_realista = lambda: mostrar_animacion("gantt")
