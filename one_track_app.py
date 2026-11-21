@@ -1494,11 +1494,11 @@ elif st.session_state.vista_actual == "Configuración de ONE Track":
         bind_number_input("Verde", "cfg_corte_verde", 100.0)
 
     # --- SECCION DESCOMENTADA: BOTON DATOS DUMMY ---
-    st.markdown("<br><div class='sub-section-title'>🛠️ Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
-    st.info("Presiona este botón para llenar tu tablero con datos estructurados de ejemplo que reflejan todas las funciones nuevas.")
+    #st.markdown("<br><div class='sub-section-title'>🛠️ Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
+    #st.info("Presiona este botón para llenar tu tablero con datos estructurados de ejemplo que reflejan todas las funciones nuevas.")
     
-    if st.button("Llenar tablero con datos Dummy", type="secondary", on_click=ejecutar_dummy_callback):
-        st.success("¡Datos generados y guardados con éxito!")
+    #if st.button("Llenar tablero con datos Dummy", type="secondary", on_click=ejecutar_dummy_callback):
+    #    st.success("¡Datos generados y guardados con éxito!")
         
     st.markdown("<br><div class='sub-section-title'>🔒 Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
