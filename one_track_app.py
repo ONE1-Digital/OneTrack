@@ -292,7 +292,35 @@ def cargar_datos():
     except Exception:
         df_kpis, df_okrs, df_outputs_db, df_tareas = pd.DataFrame(), pd.DataFrame(), pd.DataFrame(), pd.DataFrame()
 
+    # Consultar el logo_url asociado al One Track en la base de datos de clientes (usuarios)
+    try:
+        df_user_db = conn.query(f"SELECT logo_url FROM usuarios WHERE username = '{user_token}' LIMIT 1", ttl=0)
+    except Exception:
+        df_user_db = pd.DataFrame()
+
     es_nuevo = df_kpis.empty
+
+    logo_cliente_final = ""
+    if not df_user_db.empty and "logo_url" in df_user_db.columns:
+        raw_u_logo = df_user_db.iloc[0]["logo_url"]
+        if pd.notna(raw_u_logo) and str(raw_u_logo).strip() not in ["", "None", "nan", "NaN"]:
+            logo_cliente_final = str(raw_u_logo).strip()
+
+    if not logo_cliente_final:
+        raw_session_logo = st.session_state.user_info.get("logo_url", "")
+        if pd.notna(raw_session_logo) and str(raw_session_logo).strip() not in ["", "None", "nan", "NaN"]:
+            logo_cliente_final = str(raw_session_logo).strip()
+
+    if not logo_cliente_final and not es_nuevo and "Logo_Cliente" in df_kpis.columns:
+        raw_k_logo = df_kpis.iloc[0]["Logo_Cliente"]
+        if pd.notna(raw_k_logo) and str(raw_k_logo).strip() not in ["", "None", "nan", "NaN"]:
+            logo_cliente_final = str(raw_k_logo).strip()
+
+    if not logo_cliente_final:
+        logo_cliente_final = DEFAULT_LOGO_CLIENTE
+
+    set_store("ui_logo_cliente", logo_cliente_final)
+    st.session_state.user_info["logo_url"] = logo_cliente_final
 
     for q_name in trimestres.keys():
         if not df_okrs.empty and 'OKR_ID' in df_okrs.columns:
@@ -385,8 +413,10 @@ def guardar_en_bd():
     emp = str(get_store("ui_empresa", ""))
     due = str(get_store("ui_dueno", ""))
     pue = str(get_store("ui_puesto", ""))
-    logo_c = st.session_state.user_info.get("logo_url", DEFAULT_LOGO_CLIENTE)
-    if not logo_c: logo_c = DEFAULT_LOGO_CLIENTE
+    
+    logo_c = get_store("ui_logo_cliente", st.session_state.user_info.get("logo_url", DEFAULT_LOGO_CLIENTE))
+    if not logo_c or pd.isna(logo_c) or str(logo_c).strip() in ["", "None", "nan", "NaN"]:
+        logo_c = DEFAULT_LOGO_CLIENTE
 
     df_kpi_master = get_store("df_kpi_Q1", pd.DataFrame())
     if df_kpi_master is not None and not df_kpi_master.empty:
@@ -471,128 +501,129 @@ def guardar_en_bd():
     pd.DataFrame(outputs_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Nombre", "UM", "< Mejor", "Meta", "Real", "Avance"]).to_sql("iniciativas_outputs", con=conn.engine, if_exists='append', index=False)
     pd.DataFrame(tareas_data, columns=["onetrack_id", "Iniciativa_ID", "Trimestre", "Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado"]).to_sql("iniciativas_tareas", con=conn.engine, if_exists='append', index=False)
 
-def generar_dummy_onetest():
-    mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
-    cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
-    cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
-
-    set_store("ui_p_kpis", 50.0)
-    set_store("ui_p_okrs", 50.0)
-    set_store("cfg_corte_rojo", 79.0)
-    set_store("cfg_corte_amarillo", 89.0)
-    set_store("cfg_corte_verde", 100.0)
-
-    for q_name, meses in trimestres.items():
-        cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
-        for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
-        df_k = pd.DataFrame(columns=cols_kpi)
-        
-        row1 = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0]
-        for _ in meses: row1.extend([166666.0, 166666.0 * mult_q[q_name], "⚪"])
-        df_k.loc[1] = row1
-
-        row2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
-        for _ in meses: row2.extend([95.0, 95.0 * mult_q[q_name], "⚪"])
-        df_k.loc[2] = row2
-
-        df_k = calcular_sem_kpis(df_k, meses, 79.0, 89.0, 100.0)
-        set_store(f"df_kpi_{q_name}", df_k)
-
-    # Q1
-    q_n = "Q1"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
-    set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
-    set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
-    df_o1 = pd.DataFrame(columns=cols_out)
-    df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
-    df_t1 = pd.DataFrame(columns=cols_t)
-    df_t1.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
-    df_t1.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True, ""]
-    df_t1.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t1))
-
-    # Q2
-    q_n = "Q2"; set_store(f"num_iniciativas_{q_n}", 2)
-    set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
-    set_store(f"ui_peso_{q_n}_1", 60.0)
-    set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
-    set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
-    set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
-    df_o2_1 = pd.DataFrame(columns=cols_out)
-    df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
-    df_t2_1 = pd.DataFrame(columns=cols_t)
-    df_t2_1.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
-    df_t2_1.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True, ""]
-    df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
-
-    set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
-    set_store(f"ui_peso_{q_n}_2", 40.0)
-    set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
-    set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
-    set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_2", "-")
-    set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
-    df_o2_2 = pd.DataFrame(columns=cols_out)
-    df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
-    set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
-    df_t2_2 = pd.DataFrame(columns=cols_t)
-    df_t2_2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
-    df_t2_2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False, ""]
-    df_t2_2.loc[3] = ["3.", "Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False, ""]
-    set_store(f"df_tareas_{q_n}_2", update_estatus_tareas(df_t2_2))
-
-    # Q3
-    q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
-    set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
-    df_o3 = pd.DataFrame(columns=cols_out)
-    df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
-    df_t3 = pd.DataFrame(columns=cols_t)
-    df_t3.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
-    df_t3.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False, ""]
-    df_t3.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t3))
-
-    # Q4
-    q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
-    set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
-    set_store(f"ui_peso_{q_n}_1", 100.0)
-    set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
-    set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
-    set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
-    set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
-    set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
-    df_o4 = pd.DataFrame(columns=cols_out)
-    df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
-    set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
-    df_t4 = pd.DataFrame(columns=cols_t)
-    df_t4.loc[1] = ["1.", "Revisión", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
-    df_t4.loc[2] = ["2.", "Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
-    df_t4.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
-    set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t4))
-
-def ejecutar_dummy_callback():
-    for key in list(st.session_state.keys()):
-        if key.startswith("editor_") or key.startswith("ui_") or key.startswith("live_") or key.startswith("cfg_"):
-            del st.session_state[key]
-    generar_dummy_onetest()
-    guardar_en_bd()
-    set_store("datos_cargados", False)
+# --- SECCION COMENTADA: GENERADOR DE DATOS DUMMY ---
+# def generar_dummy_onetest():
+#     mult_q = {"Q1": 0.85, "Q2": 0.90, "Q3": 0.98, "Q4": 1.05}
+#     cols_t = ["Jerarquia", "Tarea", "Responsable", "Inicio", "Fin", "Completado", "Estatus"]
+#     cols_out = ["Nombre", "UM", "< Mejor", "Meta", "Real", "Avance %"]
+# 
+#     set_store("ui_p_kpis", 50.0)
+#     set_store("ui_p_okrs", 50.0)
+#     set_store("cfg_corte_rojo", 79.0)
+#     set_store("cfg_corte_amarillo", 89.0)
+#     set_store("cfg_corte_verde", 100.0)
+# 
+#     for q_name, meses in trimestres.items():
+#         cols_kpi = ["Indicadores Clave de Desempeño (KPIs)", "Tipo", "Meta", "UM", "< Mejor", "Peso %"]
+#         for m in meses: cols_kpi.extend([f"{m} Prog", f"{m} Real", f"{m} Semáforo"])
+#         df_k = pd.DataFrame(columns=cols_kpi)
+#         
+#         row1 = ["Ventas Mensuales", "Acumulado", 500000.0, "$", "NO", 50.0]
+#         for _ in meses: row1.extend([166666.0, 166666.0 * mult_q[q_name], "⚪"])
+#         df_k.loc[1] = row1
+# 
+#         row2 = ["Satisfacción de Clientes", "Promedio", 95.0, "%", "NO", 50.0]
+#         for _ in meses: row2.extend([95.0, 95.0 * mult_q[q_name], "⚪"])
+#         df_k.loc[2] = row2
+# 
+#         df_k = calcular_sem_kpis(df_k, meses, 79.0, 89.0, 100.0)
+#         set_store(f"df_kpi_{q_name}", df_k)
+# 
+#     # Q1
+#     q_n = "Q1"; set_store(f"num_iniciativas_{q_n}", 1)
+#     set_store(f"ui_nom_{q_n}_1", "Expansión de Mercado Norte")
+#     set_store(f"ui_peso_{q_n}_1", 100.0)
+#     set_store(f"ui_obj_{q_n}_1", "Conquistar 3 nuevos estados mediante campañas digitales y alianzas locales.")
+#     set_store(f"ui_rec_talento_{q_n}_1", "1 Director Comercial, 2 Ejecutivos Regionales")
+#     set_store(f"ui_rec_presupuesto_{q_n}_1", "$250,000 MXN para pauta")
+#     set_store(f"ui_rec_infra_{q_n}_1", "Oficina en Monterrey")
+#     set_store(f"ui_rec_tec_{q_n}_1", "HubSpot CRM")
+#     df_o1 = pd.DataFrame(columns=cols_out)
+#     df_o1.loc[1] = ["Abrir sucursales", "U", "NO", 3.0, 2.0, 0.0]
+#     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o1))
+#     df_t1 = pd.DataFrame(columns=cols_t)
+#     df_t1.loc[1] = ["1.", "Investigación", "Ana", date(2026, 1, 5), date(2026, 1, 15), True, ""]
+#     df_t1.loc[2] = ["1.1", "Contratación", "Luis", date(2026, 1, 16), date(2026, 2, 10), True, ""]
+#     df_t1.loc[3] = ["1.2", "Lanzamiento", "Carlos", date(2026, 2, 15), date(2026, 3, 20), False, ""]
+#     set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t1))
+# 
+#     # Q2
+#     q_n = "Q2"; set_store(f"num_iniciativas_{q_n}", 2)
+#     set_store(f"ui_nom_{q_n}_1", "Nuevo Producto Alpha")
+#     set_store(f"ui_peso_{q_n}_1", 60.0)
+#     set_store(f"ui_obj_{q_n}_1", "Lanzar producto Alpha antes del cierre de semestre.")
+#     set_store(f"ui_rec_talento_{q_n}_1", "1 Product Manager")
+#     set_store(f"ui_rec_presupuesto_{q_n}_1", "$180,000 MXN")
+#     set_store(f"ui_rec_infra_{q_n}_1", "Servidores cloud AWS")
+#     set_store(f"ui_rec_tec_{q_n}_1", "Figma, GitHub")
+#     df_o2_1 = pd.DataFrame(columns=cols_out)
+#     df_o2_1.loc[1] = ["Prototipos", "U", "NO", 5.0, 5.0, 0.0]
+#     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o2_1))
+#     df_t2_1 = pd.DataFrame(columns=cols_t)
+#     df_t2_1.loc[1] = ["1.", "Diseño", "Ana", date(2026, 4, 1), date(2026, 4, 20), True, ""]
+#     df_t2_1.loc[2] = ["2.", "Pruebas", "Luis", date(2026, 5, 1), date(2026, 5, 15), True, ""]
+#     df_t2_1.loc[3] = ["3.", "Preventa", "Carlos", date(2026, 6, 1), date(2026, 6, 25), False, ""]
+#     set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t2_1))
+# 
+#     set_store(f"ui_nom_{q_n}_2", "Optimización Costos")
+#     set_store(f"ui_peso_{q_n}_2", 40.0)
+#     set_store(f"ui_obj_{q_n}_2", "Reducir costos operativos en logística.")
+#     set_store(f"ui_rec_talento_{q_n}_2", "Auditor Financiero")
+#     set_store(f"ui_rec_presupuesto_{q_n}_2", "$50,000 MXN")
+#     set_store(f"ui_rec_infra_{q_n}_2", "-")
+#     set_store(f"ui_rec_tec_{q_n}_2", "Excel Avanzado")
+#     df_o2_2 = pd.DataFrame(columns=cols_out)
+#     df_o2_2.loc[1] = ["Ahorro en logística", "%", "SI", 15.0, 12.0, 0.0]
+#     set_store(f"df_outputs_{q_n}_2", update_avance_resultados(df_o2_2))
+#     df_t2_2 = pd.DataFrame(columns=cols_t)
+#     df_t2_2.loc[1] = ["1.", "Auditoría", "Sofia", date(2026, 4, 5), date(2026, 4, 25), True, ""]
+#     df_t2_2.loc[2] = ["2.", "Renegociación", "Luis", date(2026, 5, 5), date(2026, 5, 20), False, ""]
+#     df_t2_2.loc[3] = ["3.", "Rutas", "Sofia", date(2026, 6, 1), date(2026, 6, 28), False, ""]
+#     set_store(f"df_tareas_{q_n}_2", update_estatus_tareas(df_t2_2))
+# 
+#     # Q3
+#     q_n = "Q3"; set_store(f"num_iniciativas_{q_n}", 1)
+#     set_store(f"ui_nom_{q_n}_1", "Certificación ISO")
+#     set_store(f"ui_peso_{q_n}_1", 100.0)
+#     set_store(f"ui_obj_{q_n}_1", "Obtener certificación en procesos clave.")
+#     set_store(f"ui_rec_talento_{q_n}_1", "Oficial de Cumplimiento")
+#     set_store(f"ui_rec_presupuesto_{q_n}_1", "$120,000 MXN")
+#     set_store(f"ui_rec_infra_{q_n}_1", "Salas de capacitación")
+#     set_store(f"ui_rec_tec_{q_n}_1", "Software de Auditoría")
+#     df_o3 = pd.DataFrame(columns=cols_out)
+#     df_o3.loc[1] = ["Fases", "U", "NO", 3.0, 2.0, 0.0]
+#     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o3))
+#     df_t3 = pd.DataFrame(columns=cols_t)
+#     df_t3.loc[1] = ["1.", "Diagnóstico", "Juan", date(2026, 7, 1), date(2026, 7, 15), True, ""]
+#     df_t3.loc[2] = ["2.", "Capacitación", "Ana", date(2026, 8, 1), date(2026, 8, 20), False, ""]
+#     df_t3.loc[3] = ["3.", "Auditoría Final", "Luis", date(2026, 9, 10), date(2026, 9, 25), False, ""]
+#     set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t3))
+# 
+#     # Q4
+#     q_n = "Q4"; set_store(f"num_iniciativas_{q_n}", 1)
+#     set_store(f"ui_nom_{q_n}_1", "Planificación 2027")
+#     set_store(f"ui_peso_{q_n}_1", 100.0)
+#     set_store(f"ui_obj_{q_n}_1", "Cerrar métricas y presupuesto.")
+#     set_store(f"ui_rec_talento_{q_n}_1", "Equipo Directivo")
+#     set_store(f"ui_rec_presupuesto_{q_n}_1", "$90,000 MXN")
+#     set_store(f"ui_rec_infra_{q_n}_1", "Sede externa")
+#     set_store(f"ui_rec_tec_{q_n}_1", "Power BI")
+#     df_o4 = pd.DataFrame(columns=cols_out)
+#     df_o4.loc[1] = ["Presupuestos", "U", "NO", 4.0, 4.0, 0.0]
+#     set_store(f"df_outputs_{q_n}_1", update_avance_resultados(df_o4))
+#     df_t4 = pd.DataFrame(columns=cols_t)
+#     df_t4.loc[1] = ["1.", "Revisión", "Carlos", date(2026, 10, 5), date(2026, 10, 25), True, ""]
+#     df_t4.loc[2] = ["2.", "Metas", "Ana", date(2026, 11, 1), date(2026, 11, 20), False, ""]
+#     df_t4.loc[3] = ["3.", "Presentación", "Juan", date(2026, 12, 1), date(2026, 12, 15), False, ""]
+#     set_store(f"df_tareas_{q_n}_1", update_estatus_tareas(df_t4))
+# 
+# def ejecutar_dummy_callback():
+#     for key in list(st.session_state.keys()):
+#         if key.startswith("editor_") or key.startswith("ui_") or key.startswith("live_") or key.startswith("cfg_"):
+#             del st.session_state[key]
+#     generar_dummy_onetest()
+#     guardar_en_bd()
+#     set_store("datos_cargados", False)
 
 # ==============================================================================
 # FASE 4: MOTOR DE SIMULACIONES INTERACTIVAS HTML5/JS (CON ESPACIADO CORREGIDO)
@@ -637,10 +668,10 @@ ANIMACIONES_HTML = {
                     await wait(800);
                     let t = "Ventas Nuevos Clientes";
                     let acum = "";
-                    for(let i=0; i<t.length; i++) { 
-                        acum += t[i]; 
-                        document.getElementById('kpi_nombre').textContent = acum; 
-                        await wait(40); 
+                    for(let i=0; i<t.length; i++) {
+                        acum += t[i];
+                        document.getElementById('kpi_nombre').textContent = acum;
+                        await wait(40);
                     }
                     await wait(300); document.getElementById('kpi_meta').textContent = "500,000";
                     await wait(300); document.getElementById('kpi_peso').textContent = "50 %";
@@ -694,15 +725,15 @@ ANIMACIONES_HTML = {
                     document.getElementById('r1_real').textContent = "-"; document.getElementById('r1_av').textContent = "-";
                     document.getElementById('r1_av').style.color = "black";
                     await wait(800);
-                    
+
                     let t = "Lanzamiento de Plataforma B2B";
                     let acum = "";
-                    for(let i=0; i<t.length; i++) { 
-                        acum += t[i]; 
-                        document.getElementById('ini_nom').textContent = acum; 
-                        await wait(35); 
+                    for(let i=0; i<t.length; i++) {
+                        acum += t[i];
+                        document.getElementById('ini_nom').textContent = acum;
+                        await wait(35);
                     }
-                    
+
                     await wait(200); document.getElementById('ini_peso').textContent = "60.0";
                     await wait(200); document.getElementById('ini_obj').textContent = "Digitalizar el canal de pedidos mayoristas reduciendo tiempos de captura a 24 horas.";
                     await wait(400); document.getElementById('r1_nom').textContent = "Clientes B2B Activos";
@@ -774,7 +805,7 @@ ANIMACIONES_HTML = {
         """
     },
     "recursos": {
-        "height": 270,
+        "height": 170,
         "html": """
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
@@ -811,7 +842,7 @@ ANIMACIONES_HTML = {
         """
     },
     "intervalos": {
-        "height": 220,
+        "height": 170,
         "html": """
         <div style="display:flex; gap:15px; align-items:center; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
             <div style="flex:1; background:#ffffff; border:1px solid #cbd5e1; border-radius:8px; padding:10px;">
@@ -868,7 +899,6 @@ def mostrar_animacion(clave):
     if clave in ANIMACIONES_HTML:
         components.html(ANIMACIONES_HTML[clave]["html"], height=ANIMACIONES_HTML[clave]["height"])
 
-# Alias explícitos a prueba de fallos
 animacion_kpis_realista = lambda: mostrar_animacion("kpis")
 animacion_iniciativa_completa_realista = lambda: mostrar_animacion("iniciativa")
 animacion_gantt_tareas_realista = lambda: mostrar_animacion("gantt")
@@ -941,8 +971,9 @@ with st.sidebar:
 # --- HEADER PRINCIPAL ---
 col1, col2, col3, col4 = st.columns([1, 1.5, 1.5, 1])
 with col2: 
-    logo_c = st.session_state.user_info.get("logo_url", "")
-    if not logo_c or str(logo_c).strip() == "": logo_c = DEFAULT_LOGO_CLIENTE
+    logo_c = get_store("ui_logo_cliente", st.session_state.user_info.get("logo_url", DEFAULT_LOGO_CLIENTE))
+    if not logo_c or pd.isna(logo_c) or str(logo_c).strip() in ["", "None", "nan", "NaN"]:
+        logo_c = DEFAULT_LOGO_CLIENTE
     st.markdown(f"<div class='img-placeholder'><img src='{logo_c}' style='max-height: 90px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
 with col3: 
     st.markdown(f"<div class='img-placeholder'><img src='{DEFAULT_LOGO_ONE_TRACK}' style='max-height: 90px; max-width: 100%; object-fit: contain;'></div>", unsafe_allow_html=True)
@@ -1355,11 +1386,12 @@ elif st.session_state.vista_actual == "Configuración de ONE Track":
         st.markdown("<div class='custom-label'>Límite Superior Verde (%)</div>", unsafe_allow_html=True)
         bind_number_input("Verde", "cfg_corte_verde", 100.0)
 
-    st.markdown("<br><div class='sub-section-title'>🛠️ Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
-    st.info("Presiona este botón para llenar tu tablero con datos estructurados de ejemplo que reflejan todas las funciones nuevas.")
-    
-    if st.button("Llenar tablero con datos Dummy", type="secondary", on_click=ejecutar_dummy_callback):
-        st.success("¡Datos generados y guardados con éxito!")
+    # --- SECCION COMENTADA: BOTON DATOS DUMMY ---
+    # st.markdown("<br><div class='sub-section-title'>🛠️ Generar Datos de Prueba (Dummy)</div>", unsafe_allow_html=True)
+    # st.info("Presiona este botón para llenar tu tablero con datos estructurados de ejemplo que reflejan todas las funciones nuevas.")
+    # 
+    # if st.button("Llenar tablero con datos Dummy", type="secondary", on_click=ejecutar_dummy_callback):
+    #     st.success("¡Datos generados y guardados con éxito!")
         
     st.markdown("<br><div class='sub-section-title'>🔒 Seguridad de la Cuenta</div>", unsafe_allow_html=True)
     st.write(f"**Usuario Actual (Token de Acceso):** {token}")
